@@ -80,5 +80,6 @@ export default defineConfig({
   plugins: [perfReceiver(), snapReceiver()],
   oxc: { jsx: { runtime: 'automatic', importSource: 'preact' } },
   build: { chunkSizeWarningLimit: 2000 },
-  test: { include: ['tests/**/*.test.ts'] },
+  // Partidas inteiras simuladas levam ~2 s no Mac e passam de 5 s na máquina do GitHub Actions.
+  test: { include: ['tests/**/*.test.ts'], testTimeout: 30_000 },
 });
