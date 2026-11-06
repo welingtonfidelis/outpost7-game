@@ -13,6 +13,7 @@ import { cloneProp } from './assets.ts';
 import type { Art, CharKind, PropKind } from './assets.ts';
 import { CharView } from './chars.ts';
 import { makeFortModel } from './fortModel.ts';
+import { makeTowerModel } from './fortress.ts';
 import type { Anim } from './chars.ts';
 
 const OUT = 128;
@@ -31,23 +32,11 @@ const PROPS: { key: PortraitKey; kind: PropKind }[] = [
   { key: 'gerador', kind: 'gerador' },
 ];
 
-function towerModel(art: Art): THREE.Object3D {
-  const g = new THREE.Group();
-  const foot = 2;
-  const base = cloneProp(art, 'torre', foot);
-  const p = art.props.torre;
-  const baseH = (p.size.y * foot) / Math.max(p.size.x, p.size.z);
-  const metal = new THREE.MeshLambertMaterial({ color: '#7d858c' });
-  const head = new THREE.Group();
-  head.position.y = baseH + 0.6;
-  const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 1.6), metal);
-  const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.2, 8), metal);
-  gun.rotation.z = Math.PI / 2;
-  gun.position.x = 1.1;
-  head.add(top, gun);
-  head.rotation.y = -Math.PI / 4;
-  g.add(base, head);
-  return g;
+/** A casamata das torres construídas (a mesma do mapa), com o canhão em diagonal. */
+function towerModel(): THREE.Object3D {
+  const m = makeTowerModel(1, false);
+  m.head.rotation.y = -Math.PI / 4;
+  return m.root;
 }
 
 /**
@@ -117,7 +106,7 @@ export function makePortraits(renderer: THREE.WebGLRenderer, art: Art): Partial<
       scene.remove(o);
     };
     for (const p of PROPS) fitProp(cloneProp(art, p.kind, 3), p.key);
-    fitProp(towerModel(art), 'torre');
+    fitProp(towerModel(), 'torre');
     fitProp(makeFortModel(3, 4).root, 'fortim');
   } catch (e) {
     console.warn('retratos não saíram; a grade usa os desenhos', e);

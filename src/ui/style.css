@@ -1444,3 +1444,22 @@ span.unit-tile {
     bottom: calc(env(safe-area-inset-bottom) + 220px);
   }
 }
+
+/* Bioma da partida na tela de início (Etapa 19). */
+.help .biome {
+  margin: -2px 0 10px;
+  padding: 6px 10px;
+  border-left: 3px solid #c8703f;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.92em;
+}
+
+/* Vinheta leve por cima do jogo (Etapa 19, tom sombrio sem esconder o enxame). */
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.38) 100%);
+  /* Abaixo das etiquetas e da interface (vêm depois no HTML). */
+  z-index: 0;
+}

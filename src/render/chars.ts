@@ -6,6 +6,12 @@ import * as THREE from 'three';
 import { cloneChar, findBone } from './assets.ts';
 import type { Art, CharKind } from './assets.ts';
 
+/**
+ * Cabeça menor que a do KayKit (Etapa 19, tom mais adulto): o boneco perde a cara de
+ * cabeçudo. Aplicado depois da animação a cada quadro.
+ */
+const HEAD_SCALE = 0.6;
+
 /** Giro da arma no osso da mão (ver o construtor). */
 export const GRIP_TURN = Math.PI / 2;
 
@@ -18,6 +24,7 @@ export class CharView {
   private actions = new Map<Anim, THREE.AnimationAction>();
   private current: Anim | null = null;
   readonly cargo: THREE.Object3D | null = null;
+  private head: THREE.Object3D | null;
 
   constructor(art: Art, kind: CharKind) {
     this.model = cloneChar(art, kind);
@@ -33,6 +40,7 @@ export class CharView {
       }
       this.actions.set(name, a);
     }
+    this.head = findBone(this.model, ['head', 'Head']);
     const hand = findBone(this.model, ['handslotr', 'handslot.r']);
     const weapon = art.weapons[kind];
     if (hand && weapon) {
@@ -92,6 +100,7 @@ export class CharView {
   update(dt: number): void {
     this.wantFor += dt;
     this.mixer.update(dt);
+    this.head?.scale.setScalar(HEAD_SCALE);
   }
 
   dispose(): void {

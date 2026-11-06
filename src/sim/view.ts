@@ -3,7 +3,7 @@
  * worker. Os insetos vão num buffer à parte (6 floats cada) e a muralha num array de HP
  * alinhado com `wallIdx` (a mesma ordem que makeSwarm gera dos dois lados).
  */
-import { B_BITE, B_DIG, B_DYING, B_NONE, B_WALK, GATE, WALL, cellAt, repairCost } from './swarm.ts';
+import { B_BITE, B_DIG, B_DYING, B_NONE, B_WALK, GATE, SP_LEAPER, SP_SPITTER, WALL, cellAt, repairCost } from './swarm.ts';
 import type { World } from './types.ts';
 
 /** px, pz, x, z, direção, estado, altura (pilha e muralha), tipo (0 comum, 1 escavador, 2 grande). Só para desenhar. */
@@ -29,6 +29,7 @@ export function makeView(w: World, bugs?: Float32Array): { view: WorldView; bugs
   const sw = w.swarm;
   const need = sw.n * BUG_FLOATS;
   const out = bugs && bugs.length >= need ? bugs : new Float32Array(Math.max(need, BUG_FLOATS * 64));
+  const leapT = w.cfg.species.saltador.leap.time;
   for (let i = 0; i < sw.n; i++) {
     const o = i * BUG_FLOATS;
     const st = sw.state[i]!;
@@ -49,9 +50,15 @@ export function makeView(w: World, bugs?: Float32Array): { view: WorldView; bugs
         if (f >= 0 && sw.pile[f]! > 0) y = sw.pile[f]! * WALL_TOP * (0.35 + 0.65 * ((i % 5) / 4));
       }
     }
+    // Etapa 20: saltador no ar (arco do pulo) e cuspidor cuspindo (distância, em negativo).
+    const spc = sw.sp[i]!;
+    if (spc === SP_LEAPER && sw.leap[i]! > 0) {
+      const k = 1 - sw.leap[i]! / leapT;
+      y = Math.max(y, Math.sin(Math.max(0, Math.min(1, k)) * Math.PI) * sw.aim[i]!);
+    } else if (spc === SP_SPITTER && st === B_BITE && sw.aim[i]! > 0) y = -sw.aim[i]!;
     out[o + 6] = y;
-    // Tipo de aparência: escavador (com túnel) ou grande (um a cada 12, só visual).
-    out[o + 7] = st === B_DIG ? 1 : i % 12 === 0 ? 2 : 0;
+    // Aparência: escavador (com túnel) ou a espécie (SP_*).
+    out[o + 7] = st === B_DIG ? 1 : spc;
   }
   const nW = sw.wallIdx.length;
   const wallCells = Int32Array.from(sw.wallIdx);

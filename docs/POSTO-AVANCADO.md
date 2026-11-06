@@ -2,7 +2,7 @@
 
 Doc único do projeto: GDD, avaliação técnica, plano do protótipo, estado e como rodar. O jogo se chama **Outpost 7** (decisão do usuário em 2026-11-06, repositório `welingtonfidelis/outpost7-game`); "Posto Avançado" era o codinome e segue no nome da pasta, deste arquivo e das chaves de save.
 
-**Estado em 2026-11-05:** as etapas 0 a 12 do roteiro estão prontas (§C), e a 12 (arte do KayKit, inseto novo e som, §C.22–C.23) foi jogada no iPhone depois das correções de tremido e da arma. A Etapa 13 fecha as pendências da interface: escolher tropas por toque, toque duplo e caixa, ordens por unidade, ícones e retratos (jogados no iPhone: "ficou bom") e o canteiro de obra com guindaste, faíscas e barra (falta jogar no iPhone) (§C.24). A Etapa 14 trouxe o fortim (§C.25–C.26). A Etapa 15 refez a IA do enxame: bandos, levas, andar caótico e caçadores que atacam o fortim e as tropas no mapa (§C.27–C.28). A Etapa 16 mostra o tempo de volta de cada trabalhador, avisa quem não chega e chama só quem está em risco (§C.29–C.30). A Etapa 17 trouxe as decisões do usuário (aviso de 20 s, horda atrás de tudo que está fora, fortim como posto avançado com abrigo), chamar um trabalhador, salvar a partida e mortes marcantes (§C.31–C.32); falta jogar no iPhone e decidir se compensa a dificuldade. A 6 trouxe soldados e robôs (§C.10–C.11); a 7, a construção livre (§C.12–C.13); a 8 e a 9, a curva gradual, a economia que se renova, a produção e as melhorias (§C.14–C.17); a 10, a interface de RTS com o StarCraft como referência de gênero (§C.18–C.19); a 11, insetos que escalam e cavam (§C.20–C.21). O iPhone do usuário segurou o enxame até 8 mil insetos e caiu em 16 mil (§C.1). A horda roda num Web Worker (§C.8–C.9). Nada commitado.
+**Estado em 2026-11-05:** as etapas 0 a 12 do roteiro estão prontas (§C), e a 12 (arte do KayKit, inseto novo e som, §C.22–C.23) foi jogada no iPhone depois das correções de tremido e da arma. A Etapa 13 fecha as pendências da interface: escolher tropas por toque, toque duplo e caixa, ordens por unidade, ícones e retratos (jogados no iPhone: "ficou bom") e o canteiro de obra com guindaste, faíscas e barra (falta jogar no iPhone) (§C.24). A Etapa 14 trouxe o fortim (§C.25–C.26). A Etapa 15 refez a IA do enxame: bandos, levas, andar caótico e caçadores que atacam o fortim e as tropas no mapa (§C.27–C.28). A Etapa 16 mostra o tempo de volta de cada trabalhador, avisa quem não chega e chama só quem está em risco (§C.29–C.30). A Etapa 17 trouxe as decisões do usuário (aviso de 20 s, horda atrás de tudo que está fora, fortim como posto avançado com abrigo), chamar um trabalhador, salvar a partida e mortes marcantes (§C.31–C.32); falta jogar no iPhone e decidir se compensa a dificuldade. A Etapa 18 refez o visual do forte a partir de uma imagem de referência do usuário (§C.33). A Etapa 19 trouxe biomas aleatórios e o tom sombrio (§C.34–C.35). A Etapa 20 dividiu o enxame em quatro espécies (§C.36). A 6 trouxe soldados e robôs (§C.10–C.11); a 7, a construção livre (§C.12–C.13); a 8 e a 9, a curva gradual, a economia que se renova, a produção e as melhorias (§C.14–C.17); a 10, a interface de RTS com o StarCraft como referência de gênero (§C.18–C.19); a 11, insetos que escalam e cavam (§C.20–C.21). O iPhone do usuário segurou o enxame até 8 mil insetos e caiu em 16 mil (§C.1). A horda roda num Web Worker (§C.8–C.9). As etapas 0 a 17 estão no GitHub (`welingtonfidelis/outpost7-game`, commit b2aed21); as 18 a 20 ainda não foram commitadas.
 
 ## Sumário
 - Parte A: avaliação técnica (feita antes do código)
@@ -250,6 +250,9 @@ Mantido como veio, para referência interna. O título e os nomes ligados ao fil
 | 9. Produção e melhorias | Quartel, fila de treino, atirador, melhorias de quartel, fábrica e torre, painel do prédio | Prédios diferentes geram unidades diferentes e melhorar melhora | Pronta (§C.17) |
 | 12. Arte e som | KayKit (personagens animados, prédios, muralha, minério), inseto novo com LOD por distância, som de combate | Mais bonito sem perder os 60 fps no iPhone | Pronta (§C.23) e jogada pelo usuário no iPhone, depois das correções de tremido e da arma |
 | 17. Decisões, abrigo, salvar e mortes | Aviso de 20 s, caçadores atrás de tudo que está fora (com fila), fortim posto avançado (blindado, abrigo de 4, até 95 m), chamar um trabalhador, salvar manual e automático, mortes marcantes, conserto de prédios | Tudo o que o usuário pediu em 2026-11-05 | Pronta no Mac (§C.32); falta jogar no iPhone |
+| 18. Visual do forte | Muralha de concreto com capa, painéis de grade e colunas; portões de chapa com faixa de perigo e batentes com luz; escombros; baluartes octogonais e casamatas com canhão; pátio de areia batida com trilhas; lajes sob os prédios; caixas, barris e holofotes; dunas no sombreado | Imagem de referência do usuário em 2026-11-06 | Pronta no Mac (§C.33); falta jogar no iPhone |
+| 19. Biomas e tom sombrio | Bioma aleatório por partida (deserto, floresta, gelo) com chão, luz, névoa, flora, partículas e cor dos insetos; grade de cor sombria mas legível; concreto gasto; personagens menos cabeçudos | Pedido do usuário em 2026-11-06 | Pronta no Mac (§C.35); falta jogar no iPhone |
+| 20. Espécies do enxame | Corredor, besouro couraçado, saltador (bote e pulo da muralha) e cuspidor (ácido de longe), com malhas, brilho e efeitos próprios; equilíbrio com bots | Pedido do usuário em 2026-11-06 | Pronta no Mac (§C.36); falta jogar no iPhone |
 | 16. Recolher com informação | Tempo de volta sobre a cabeça, "não chega · %", contagem de risco, "Chamar em risco" com `hold`, minimapa | O jogador sabe quem chamar e quando, e pode chamar só esses | Pronta no Mac (§C.30); falta jogar no iPhone |
 | 15. IA do enxame | Bandos e levas, desvio e ritmo próprios, caçadores do fortim e das tropas, escalada com 45 | Horda caótica que ataca o fortim, sem mudar muito a progressão | Pronta no Mac (§C.28); falta jogar no iPhone |
 | 14. Fortim | Prédio com vagas para soldados (dano e alcance maiores, fora do alcance do enxame), Chamar, Sair, queda com dano; muralha escolhida pelo toque | O fortim ajuda sem desequilibrar e entrar é um toque | Pronta no Mac (§C.26); falta jogar no iPhone |
@@ -339,7 +342,7 @@ Rodada com `npm run balance -- --seeds 8 --waves 8 --warning 20,30` (cerca de 7 
   - `?horda=N`: a primeira onda já sai com N insetos (teto de 20 mil). Serve para medir o jogo no iPhone.
   - `?aviso=S`: janela de aviso em segundos.
 - **Comandos:**
-  - `npm test` (73 testes), `npm run typecheck` e `npm run build`.
+  - `npm test` (80 testes), `npm run typecheck` e `npm run build`.
   - `npm run balance -- --seeds 30 --waves 8 --warning 15,20,30,45`.
 - **Console (só em dev):**
   - `await posto.simulate(s)` pula s segundos de jogo (no worker, por isso é assíncrono).
@@ -1431,3 +1434,98 @@ Pedido em 2026-11-05 ("ficou bom por enquanto. pode seguir"), depois da IA do en
   - **O que pesa mais é o aviso de 20 s.** O bot esperto ia à onda 13–15 com 30 s e foi à 10–11 com 20 s, mesmo usando "Chamar em risco".
   - **Os caçadores pesam para quem deixa a economia fora.** Com 20% de caçadores e percepção de 25 m, o bot simples caía na 8–9; ficaram 15% (até 30%) e 20 m.
   - **O jogo ficou mais difícil:** a decisão de compensar (mais minério por viagem, horda crescendo mais devagar ou calma mais longa) fica com o usuário.
+
+## C.33 Etapa 18: o visual do forte
+
+**Pedido (2026-11-06):** o usuário mandou uma imagem de referência de uma base militar no deserto e pediu um forte mais detalhado, com peças do KayKit local ou modelos de licença permissiva da internet (projeto de hobby, sem fim comercial).
+
+**O que tinha no KayKit local:** nada de muralha de concreto, guarita ou portão blindado; o Space Base tem estilo de brinquedo (branco e laranja). Do KayKit vieram só enfeites: caixas, barris de combustível, pallet e cargas (Resource Bits e Space Base, com os .bin baixados por `git lfs pull` da coleção). O resto é feito por código, com texturas pintadas em canvas. Nada foi baixado da internet.
+
+**O que mudou na tela (`src/render/fortress.ts`, `src/render/yard.ts`, `src/render/stage.ts`):**
+- **Muralha por célula**, como antes (o dano aparece célula a célula): corpo de concreto moldado (furos de forma, escorridos, poeira no pé), capa mais larga no alto e painéis escuros com grade entre as colunas.
+- **Colunas:** no anel fixo, uma no meio de cada lance e os batentes dos portões; nas muralhas do jogador, nas pontas, ao lado de portões e a cada 5 células. Cobrem as duas fileiras do anel e somem se uma das células cair.
+- **Portões:** chapa nervurada com faixa de perigo que desce no chão (aberto, fica a laje listrada). Batentes listrados com luz âmbar com o portão aberto e vermelha com ele fechando ou fechado.
+- **Escombros:** pedaços de concreto no lugar das células caídas (antes era a caixa achatada).
+- **Torres:** baluarte octogonal de concreto nos cantos (faixa de perigo, laje e parapeito) e casamata menor nas torres construídas; canhão com anel, carcaça blindada, chapa inclinada e um, dois ou três canos pelo nível. O retrato da torre usa a casamata.
+- **Pátio:** areia batida com trilhas de pneu até os portões e terra junto da muralha; laje de concreto escuro com cantoneiras listradas embaixo do depósito e de cada prédio.
+- **Enfeites:** pilhas de caixas, barris, pallet e cargas junto da muralha, longe das trilhas e dos lugares de espera; quatro holofotes junto dos baluartes. Um grupo some se o jogador construir um prédio por cima.
+- **Dunas só no sombreado:** o chão do jogo continua plano (a horda e as pessoas andam em y = 0), mas o shader do chão desenha cristas e vales e, de perto, ondinhas de vento. Tudo some perto da base.
+
+**Custo:** instâncias e geometrias juntadas (caixas com só dois grupos, parapeito numa malha só). O quadro no Mac ficou em ~0,4 ms de CPU com a base inteira na tela. Os 73 testes passam (a mudança é só de tela).
+
+**Falta:** jogar no iPhone e ver se o desempenho segue igual.
+
+## C.34 Direção de arte: decisão de 2026-11-06
+
+**Pedidos do usuário:**
+- Bioma aleatório a cada partida nova (deserto, floresta, gelo).
+- Inimigos com mais detalhe e variações; pode usar itch.io ou modelos abertos se o KayKit local não tiver.
+- Um tema mais adulto e sombrio para o jogo de horda e defesa.
+
+**O que foi visto:**
+- **KayKit local:** não há insetos nem criaturas. O Forest Nature Pack tem árvores, pedras e capim em 8 cores.
+- **Internet:** nenhum pacote aberto de insetos alienígenas animados combina com o jogo e aguenta milhares de cópias. Os candidatos:
+  - Quaternius Ultimate Monsters (CC0): monstros fofos.
+  - "Alien Bug Animated" do OpenGameArt (CC0): um único bicho de pernas compridas, perto demais do inseto do filme.
+  - Uma formiga CC0 só em .blend.
+- **Teste de noite escura** (`?clima=noite`): o usuário não gostou, porque o jogador perderia os detalhes do enxame. O teste foi removido.
+
+**Decisão:** 3D sombrio (sem 2.5D), com o tom pesado vindo da paleta, sem escuridão: o enxame tem que aparecer. Os inimigos mais detalhados e variados ficam para a próxima etapa.
+
+## C.35 Etapa 19: biomas e tom sombrio (como ficou)
+
+- **Bioma por partida** (`src/render/biome.ts`): sai da semente do mundo (resto da divisão por 3), então um save volta no mesmo bioma. A tela de início mostra "Planeta desta partida". Teste: `?bioma=deserto|floresta|gelo`. Não muda a simulação.
+  - **Deserto:** fim de tarde sujo de poeira, sol baixo amarelado, dunas e poeira soprada; pedras do Space Base e árvores secas; insetos marrom-escuros.
+  - **Floresta:** mata úmida e cinzenta, manchas de musgo e terra no chão, pinheiros (só as coníferas do pacote; as copas redondas e cúbicas têm cara de brinquedo), moitas, pedras e capim, esporos no ar; insetos âmbar (aparecem no verde).
+  - **Gelo:** nevasca cinza, montes e marcas de vento na neve, pinheiros azul-petróleo, árvores secas e pedras com neve nas faces de cima (shader), neve caindo; insetos quase pretos (ótima leitura na neve).
+- **Grade de cor** (`src/render/grade.ts`): menos saturação, tom do bioma e curva ACES, sem passo extra de pós-processamento (vai no tone mapping do three; o enxame usa o mesmo no shader dele). Vinheta leve nas bordas (CSS).
+- **Muralha e pátio:** concreto mais gasto (ferrugem e fuligem), poeira do pé e piso do pátio na cor do bioma.
+- **Personagens:** a cabeça do KayKit a 60% (osso `head`, depois da animação). Saem da cara de cabeçudo.
+- **Flora** (`src/render/flora.ts`): instanciada, até ~330 mil triângulos (floresta); nada nasce a menos de ~30 m da base, perto das jazidas ou no caminho até elas; some embaixo de prédios e perto de jazidas novas. Partículas no ar (`src/render/ambient.ts`) na GPU, presas ao mundo em volta da câmera.
+- **Custo no Mac:** ~0,6–0,9 ms de CPU por quadro na floresta. Falta medir no iPhone.
+- **Testes:** 76 (3 novos do bioma) na época.
+
+**Próximo:** inimigos com mais detalhe e variações (§C.36).
+
+## C.36 Etapa 20: espécies do enxame
+
+**Pedido (2026-11-06):** inimigos com mais detalhe e variações. Nada aberto na internet serviu, e o usuário perguntou se podia usar modelos do StarCraft (de um mod do StarCraft II, `ClassicModFile4.SC2Mod`, com 206 modelos .m3 do Brood War). A resposta foi não: a arte é da Blizzard, só pode ser usada dentro do StarCraft II, e o projeto não usa personagem nem visual de outro jogo, mesmo em repositório privado. As espécies são desenhos nossos, inspirados em insetos de verdade.
+
+**As espécies** (`src/sim/config.ts` → `species`, malhas em `src/render/bugMesh.ts`):
+
+| Espécie | Inspiração | Vida | Velocidade | Mordida | Desde a onda | Papel |
+|---|---|---|---|---|---|---|
+| Corredor | formiga | 1× | 1× | 1× | 1 | o grosso da horda; o escavador é corredor |
+| Besouro couraçado | besouro-rinoceronte | 3× | 0,55× | 1,6× | 3 | casco em domo, chifre; aguenta tiro e abre brecha |
+| Saltador | gafanhoto | 0,6× | 1,3× | 0,8× | 2 | bote nas tropas a até 6 m; pula a muralha quando a pilha encostada passa de 60% |
+| Cuspidor | besouro-bombardeiro | 1,3× | 0,75× | 0,5× | 4 | bolsas verdes acesas; para a até 8 m e cospe ácido (1,2/s) na muralha, portão fechado ou prédio |
+
+- **Frações:** cada espécie começa numa fração e cresce por onda até um teto: besouro até 12%, saltador até 18%, cuspidor até 9%. O resto é corredor. Na onda 10, com cerca de 900 insetos, vieram uns 75 besouros, 99 saltadores e 75 cuspidores.
+- **Tela:**
+  - quatro espécies × três níveis de detalhe (12 chamadas de desenho);
+  - olhos cor de brasa e bolsas de ácido com brilho próprio;
+  - besouro maior e lustroso, saltador mais claro, cuspidor oliva;
+  - o cuspe é um arco de bolhas verdes com respingo no alvo;
+  - o saltador sobe em arco no bote e no pulo da muralha;
+  - os quatro insetos do bote das mortes marcantes agora são saltadores.
+- **Simulação:**
+  - espécie, relógio do pulo e alvo por inseto (`sp`, `leap`, `aim`);
+  - a mordida de cada espécie multiplica a mordida em muralha, prédio, tropa e núcleo;
+  - o cuspidor procura alvo pelo caminho a cada tick, até 8 células.
+- **Tela de início:** um parágrafo explica as espécies e sugere derrubar os cuspidores primeiro.
+- **Custo:**
+  - de perto, 700 a 980 triângulos por inseto; de longe, 116 a 180;
+  - no Mac, 4000 insetos com a floresta custam ~1,1 ms de CPU por quadro;
+  - falta medir no iPhone.
+- **Testes:** 80 (4 novos).
+
+**Equilíbrio** (bots com 6 sementes, onda média em que caem):
+
+| Variante | Torres e soldados | Melhorando tudo |
+|---|---|---|
+| Sem espécies novas | 7,7 | 8,7 |
+| Espécies na primeira versão (besouro 5×, cuspe 2,5/s, pulo a 40%) | 6,7 | 7,2 |
+| Ajustadas (valores acima) e horda crescendo 8% menos | 8,8 | 9,2 |
+
+Ficaram as ajustadas: o jogo fica um pouco mais fácil que antes das espécies (cerca de meia onda a uma onda), o que compensa em parte a dificuldade do aviso de 20 s (§C.32). O bot esperto (economia dentro da muralha e "Chamar em risco") cai na onda 10–12; antes caía na 10–11.
+

@@ -35,7 +35,8 @@ describe('curva gradual (etapa 8)', () => {
   it('poucos insetos no começo, acelerando depois, cada um mais forte', () => {
     const w = createWorld(1);
     const sizes = [0, 1, 5, 10, 20].map((n) => hordeSize(w.cfg, n));
-    expect(sizes).toEqual([160, 204, 460, 960, 2560]);
+    // Etapa 20: crescimento 8% menor (as espécies novas pesam mais por inseto).
+    expect(sizes).toEqual([160, 200, 436, 896, 2368]);
     expect(bugScale(w.cfg, 10).hp).toBeCloseTo(1.5);
     expect(bugScale(w.cfg, 10).bite).toBeCloseTo(1.4);
   });

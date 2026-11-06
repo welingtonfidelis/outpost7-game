@@ -21,7 +21,18 @@ export type PropKind =
   | 'rocks'
   | 'ore0'
   | 'ore1'
-  | 'ore2';
+  | 'ore2'
+  // Enfeites do pátio (Etapa 18).
+  | 'crateL'
+  | 'crateM'
+  | 'crateS'
+  | 'fuelA'
+  | 'fuelB'
+  | 'fuelC'
+  | 'pallet'
+  | 'cargoStack'
+  | 'cargoPack'
+  | 'tanks';
 
 const CHAR_FILES: Record<CharKind, string> = {
   worker: 'chars/Survivalist.glb',
@@ -49,6 +60,16 @@ const PROP_FILES: Record<PropKind, string> = {
   ore0: 'resource/Stone_Chunks_Large.gltf',
   ore1: 'resource/Copper_Nuggets.gltf',
   ore2: 'resource/Gold_Nuggets.gltf',
+  crateL: 'resource/Containers_Crate_Large.gltf',
+  crateM: 'resource/Containers_Crate_Medium_Grey.gltf',
+  crateS: 'resource/Containers_Crate_Small_Green.gltf',
+  fuelA: 'resource/Fuel_A_Barrels.gltf',
+  fuelB: 'resource/Fuel_B_Barrels.gltf',
+  fuelC: 'resource/Fuel_C_Barrels.gltf',
+  pallet: 'resource/Pallet_Wood_Covered_A.gltf',
+  cargoStack: 'spacebase/cargo_A_stacked.gltf',
+  cargoPack: 'spacebase/cargo_B_packed.gltf',
+  tanks: 'spacebase/containers_B.gltf',
 };
 const ANIM_FILES = ['anims/Rig_Medium_General.glb', 'anims/Rig_Medium_MovementBasic.glb', 'anims/Rig_Medium_CombatRanged.glb', 'anims/Rig_Medium_Tools.glb'];
 

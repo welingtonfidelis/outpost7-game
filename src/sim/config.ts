@@ -14,6 +14,18 @@ export interface RingConfig {
   stock: number;
 }
 
+export interface SpeciesStats {
+  hp: number;
+  speed: number;
+  bite: number;
+}
+export interface SpeciesShare {
+  from: number;
+  share: number;
+  perWave: number;
+  max: number;
+}
+
 export interface Config {
   ticksPerSecond: number;
   /** Meia largura da base quadrada (m). */
@@ -109,6 +121,19 @@ export interface Config {
     repairPerHp: number;
   };
   towers: { range: number; dps: number };
+  /**
+   * Espécies do enxame (Etapa 20, desenhos nossos): multiplicadores de vida, velocidade e
+   * mordida; a fração de cada uma (a partir da onda `from`, crescendo `perWave` até `max`).
+   * O resto é corredor. Saltador: bote em tropa perto (`leap`) e pulo sobre a muralha quando
+   * a pilha encostada nela passa de `pile`. Cuspidor: para a `range` m de muralha ou prédio
+   * e cospe ácido (`dps`).
+   */
+  species: {
+    corredor: SpeciesStats;
+    besouro: SpeciesStats & SpeciesShare;
+    saltador: SpeciesStats & SpeciesShare & { leap: { range: number; speed: number; time: number; every: number; pile: number; over: number } };
+    cuspidor: SpeciesStats & SpeciesShare & { spit: { range: number; dps: number } };
+  };
   /**
    * Comportamento da horda (Etapa 15): caçadores (fração na onda 1, quanto sobe por onda e o
    * teto), distância em que um caçador vai numa tropa, bandos (mínimo, máximo, insetos por
@@ -260,7 +285,8 @@ export const CONFIG: Config = {
   economy: { regrow: 0.25, newEvery: 2, newMin: 80, newMax: 106, newStock: 260, newLoad: 16 },
   panic: { base: 0.5, perSecond: 0.08, perSpeed: 0.12, min: 0.03, max: 0.97, clean: 0.4, dropped: 0.35 },
   morale: { start: 100, deathHit: 12, regenPerSecond: 0.1, lowAt: 50, lowSpeed: 0.85 },
-  horde: { base: 160, linear: 40, quad: 4, cap: 4000, speed: 9, hpGrowth: 0.05, biteGrowth: 0.04 },
+  // Etapa 20: crescimento 8% menor, para as espécies novas não pesarem demais (bots, §C.36).
+  horde: { base: 160, linear: 36.8, quad: 3.68, cap: 4000, speed: 9, hpGrowth: 0.05, biteGrowth: 0.04 },
   swarm: {
     grid: 280,
     wallHp: 800,
@@ -277,6 +303,14 @@ export const CONFIG: Config = {
     repairPerHp: 0.05,
   },
   towers: { range: 30, dps: 70 },
+  // Ajustado com os bots (§C.36): besouro 3× a vida (era 5), mordida 1,6 (era 3); cuspe 1,2/s
+  // (era 2,5); saltador só pula com a pilha a 60% (era 40%).
+  species: {
+    corredor: { hp: 1, speed: 1, bite: 1 },
+    besouro: { hp: 3, speed: 0.55, bite: 1.6, from: 2, share: 0.03, perWave: 0.008, max: 0.12 },
+    saltador: { hp: 0.6, speed: 1.3, bite: 0.8, from: 1, share: 0.05, perWave: 0.01, max: 0.18, leap: { range: 6, speed: 3, time: 0.45, every: 3, pile: 0.6, over: 4 } },
+    cuspidor: { hp: 1.3, speed: 0.75, bite: 0.5, from: 3, share: 0.03, perWave: 0.006, max: 0.09, spit: { range: 8, dps: 1.2 } },
+  },
   // Ajustado com os bots (§C.28): caçar torres e geradores também derrubava a progressão
   // (o bot que melhora tudo caía na onda 8–15 em vez de 18); só o fortim atrai.
   ai: {

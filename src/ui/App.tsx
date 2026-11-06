@@ -377,7 +377,9 @@ export function App({
   controls,
   camInfo,
   jump,
+  biome,
 }: {
+  biome: { name: string; blurb: string };
   session: Session;
   sound: Sound;
   labels: Labels;
@@ -844,6 +846,9 @@ export function App({
           {/* O texto rola; o "Começar" fica sempre à vista embaixo (no celular o texto passa da tela). */}
           <div class="help-body">
           <h2>Outpost 7</h2>
+          <p class="biome">
+            Planeta desta partida: <b>{biome.name}</b>. {biome.blurb}
+          </p>
           <p>Os trabalhadores saem sozinhos para buscar minério. Quanto mais longe, mais rende, e mais arriscado é.</p>
           <ul>
             <li>Quando a sirene tocar, a horda cruza o perímetro vermelho em poucos segundos.</li>
@@ -852,6 +857,7 @@ export function App({
             <li>Quem ficar fora quando a horda chegar rola o dado: a % é a chance de chegar ao portão.</li>
             <li>"Construir" põe muralhas, portões, torres, geradores, refinaria e fábrica onde você quiser.</li>
             <li>Torres, soldados e robôs defendem a muralha. Sozinhos, soldados vão para os portões e robôs tampam brechas. Toque numa tropa (ou segure e arraste uma caixa) e depois no chão para mandar; "Auto" devolve ao automático.</li>
+            <li>A horda tem quatro espécies: o corredor (o comum); o besouro couraçado (a partir da onda 3), lento, aguenta muito tiro e morde a muralha com força; o saltador (onda 2), que dá o bote nas tropas e pula a muralha quando a pilha encostada nela já está alta; e o cuspidor (onda 4), de bolsas verdes acesas, que para longe e cospe ácido na muralha e nos prédios. Derrube os cuspidores primeiro.</li>
             <li>O fortim guarda até 4 soldados: com eles escolhidos, toque no fortim. Lá dentro o enxame não os alcança e o tiro rende mais, mas o fortim pode cair. Construído fora da muralha (até 95 m), vira posto avançado: blindado e abrigo de 4 trabalhadores na hora do pânico.</li>
             <li>Tudo que você constrói fora da muralha chama a atenção da horda. "Consertar" conserta muralhas e prédios.</li>
             <li>Toque num trabalhador para ver o tempo de volta e chamar só ele.</li>

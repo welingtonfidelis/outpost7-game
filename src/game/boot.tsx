@@ -4,7 +4,12 @@ import { Sound } from '../audio/sound.ts';
 import { Labels } from '../render/labels.ts';
 import { PerfMeter } from '../render/perf.ts';
 import { RtsCamera } from '../render/rtsCamera.ts';
-import { createStage } from '../render/stage.ts';
+import { applyBiome, createStage } from '../render/stage.ts';
+import { biomeFor } from '../render/biome.ts';
+import { applyGrade } from '../render/grade.ts';
+import { setFortressBiome } from '../render/fortress.ts';
+import { loadFlora } from '../render/flora.ts';
+import type { FloraArt } from '../render/flora.ts';
 import { loadArt } from '../render/assets.ts';
 import { makePortraits } from '../render/portraits.ts';
 import type { Art } from '../render/assets.ts';
@@ -59,10 +64,23 @@ export async function startGame(canvas: HTMLCanvasElement, ui: HTMLElement, labe
   }
   await session.ready;
   session.paused = true;
+  // Bioma da partida (Etapa 19): sai da semente do mundo (a de um save volta igual).
+  const biome = biomeFor(session.world.seed, params);
+  applyBiome(stage, biome);
+  applyGrade(stage.renderer, biome);
+  setFortressBiome(biome);
+  let flora: FloraArt | null = null;
+  if (art) {
+    try {
+      flora = await loadFlora(`${import.meta.env.BASE_URL}assets/kaykit/`, biome);
+    } catch (e) {
+      console.warn('flora do bioma não carregou', e);
+    }
+  }
   ui.innerHTML = '';
   // Retratos da grade e da seleção, tirados dos próprios modelos.
   if (art) setPortraits(makePortraits(stage.renderer, art));
-  const view = new World3D(stage.scene, session.world, art);
+  const view = new World3D(stage.scene, session.world, art, biome, flora);
   const labels = new Labels(labelsEl, stage.camera, view);
   const sound = new Sound();
   const perf = new PerfMeter(stage.renderer);
@@ -293,7 +311,7 @@ export async function startGame(canvas: HTMLCanvasElement, ui: HTMLElement, labe
   const jump = (x: number, z: number) => {
     cam.target = { x, z };
   };
-  render(<App session={session} sound={sound} labels={labels} controls={controls} camInfo={camInfo} jump={jump} />, ui);
+  render(<App session={session} sound={sound} labels={labels} controls={controls} camInfo={camInfo} jump={jump} biome={biome} />, ui);
 
   let last = performance.now();
   let lastDeathAt = performance.now();
@@ -302,6 +320,7 @@ export async function startGame(canvas: HTMLCanvasElement, ui: HTMLElement, labe
     session.frame(dtMs);
     cam.update(dtMs / 1000);
     view.cameraPos.copy(stage.camera.position);
+    view.camTarget.set(cam.target.x, cam.target.z);
     view.pixelH = stage.renderer.domElement.height;
     view.update(session.world, session.bugs, session.time, session.alpha, dtMs / 1000, session.snapId);
     stage.renderer.render(stage.scene, stage.camera);

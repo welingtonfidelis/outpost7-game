@@ -4,7 +4,7 @@
  * que vêm do worker; nunca escreve neles.
  */
 import * as THREE from 'three';
-import { BUG_FLOATS, insideBase, RUBBLE } from '../sim/index.ts';
+import { BUG_FLOATS, insideBase } from '../sim/index.ts';
 import type { Building, BuildingKind, Tower, Unit, UnitKind, Worker, WorldView } from '../sim/index.ts';
 import type { Selection } from '../game/controls.ts';
 import { cloneProp } from './assets.ts';
@@ -15,11 +15,17 @@ import { BuildSites, Particles } from './sites.ts';
 import { FORT_LAMP, makeFortModel } from './fortModel.ts';
 import { fortStats } from '../sim/index.ts';
 import { FOG } from './stage.ts';
+import { Fortress, makePad, makeTowerModel, yardFloor } from './fortress.ts';
+import { YardDecor } from './yard.ts';
+import { BIOMES } from './biome.ts';
+import type { Biome } from './biome.ts';
+import { Flora } from './flora.ts';
+import type { FloraArt } from './flora.ts';
+import { Ambient } from './ambient.ts';
 
 const RING_COLORS = ['#9aa6b4', '#c8703f', '#e8c547'];
 const CUBES_PER_NODE = 6;
 const LEAPERS = 32;
-const WALL_H = 3.4;
 
 function stripes(): THREE.CanvasTexture {
   const cv = document.createElement('canvas');
@@ -123,15 +129,10 @@ interface TowerView {
   level: number;
 }
 
-const MAX_WALLS = 6000;
-const MAX_GATES = 800;
-
 export class World3D {
   readonly root = new THREE.Group();
-  private wallMesh: THREE.InstancedMesh;
-  private gateMesh: THREE.InstancedMesh;
-  private wallSeen: Float32Array | null = null;
-  private wallCellsSeen: Int32Array | null = null;
+  /** Muralha, portões, colunas e escombros (Etapa 18). */
+  private fortress: Fortress;
   private gateOpen = [1, 1, 1, 1, 1];
   private buildingViews = new Map<
     number,
@@ -207,12 +208,22 @@ export class World3D {
   readonly sites = new BuildSites();
   /** Mortes marcantes (Etapa 17): jato de líquido escuro. */
   private gore = new Particles(320, { color: '#7a1a10', end: '#2a0806', alpha: 0.95, soft: 0.35, additive: false, gravity: 11, drag: 0.4 });
+  /** Cuspe de ácido do cuspidor (Etapa 20): bolhas em arco e o respingo onde caem. */
+  private acid = new Particles(420, { color: '#c8ff3a', end: '#3d6a12', alpha: 0.95, soft: 0.3, additive: true, gravity: 9, drag: 0.05 });
+  private spitAt = new Float32Array(0);
+  private splashes: { at: number; x: number; y: number; z: number }[] = [];
   private lastT = 0;
   /** Mortes que a tela pediu para tremer (a câmera lê). */
   readonly deaths: { x: number; z: number; at: number }[] = [];
   private nodeProps = new Map<number, THREE.Object3D>();
+  private decor: YardDecor | null = null;
+  /** Flora e partículas do bioma (Etapa 19). */
+  private flora: Flora | null = null;
+  private ambient: Ambient;
+  /** Alvo da câmera (a tela atualiza): as partículas do ar giram em volta dele. */
+  readonly camTarget = new THREE.Vector2();
 
-  constructor(scene: THREE.Scene, view: WorldView, art: Art | null = null) {
+  constructor(scene: THREE.Scene, view: WorldView, art: Art | null = null, biome: Biome = BIOMES.deserto, floraArt: FloraArt | null = null) {
     this.art = art;
     this.view = view;
     scene.add(this.root);
@@ -276,34 +287,28 @@ export class World3D {
       stain: new THREE.PlaneGeometry(2.6, 2.6),
     };
 
-    // Piso.
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(h * 2 - 2, 0.12, h * 2 - 2), this.mats.floor);
-    floor.position.y = 0.06;
-    this.root.add(floor);
+    // Piso do pátio (areia batida com trilhas) e a laje do depósito.
+    this.root.add(yardFloor(h * 2 - 2));
+    const depotPad = makePad(8.2, 8);
+    depotPad.position.set(0.9, 0, 0);
+    this.root.add(depotPad);
 
-    // Muralha e portões: uma caixa por célula (o dano aparece célula a célula; o jogador
-    // pode traçar mais, então os buffers têm folga).
+    // Muralha e portões: por célula (o dano aparece célula a célula), com colunas,
+    // painéis, batentes e escombros (fortress.ts).
     const box = new THREE.BoxGeometry(1, 1, 1);
     box.translate(0, 0.5, 0);
-    this.wallMesh = art?.wall
-      ? new THREE.InstancedMesh(art.wall.geometry, art.wall.material, MAX_WALLS)
-      : new THREE.InstancedMesh(box, this.mats.wall!, MAX_WALLS);
-    this.gateMesh = new THREE.InstancedMesh(box, this.mats.door!, MAX_GATES);
-    this.wallMesh.count = 0;
-    this.gateMesh.count = 0;
-    this.wallMesh.frustumCulled = false;
-    this.gateMesh.frustumCulled = false;
-    this.root.add(this.wallMesh, this.gateMesh);
+    this.fortress = new Fortress(c);
+    this.root.add(this.fortress.root);
 
     // Anel do prédio escolhido.
     const sr = new THREE.RingGeometry(0.92, 1, 48);
     sr.rotateX(-Math.PI / 2);
     this.selRing = new THREE.Mesh(sr, this.mats.selRing);
-    this.selRing.position.y = 0.1;
+    this.selRing.position.y = 0.2;
     this.selRing.visible = false;
     this.root.add(this.selRing);
     this.root.add(this.sites.root);
-    this.root.add(this.gore.points);
+    this.root.add(this.gore.points, this.acid.points);
     const ur = new THREE.RingGeometry(0.55, 0.7, 24);
     ur.rotateX(-Math.PI / 2);
     this.unitRings = new THREE.InstancedMesh(ur, this.mats.unitRing!, 128);
@@ -332,12 +337,16 @@ export class World3D {
       dep.position.set(0, 0, -1.2);
       const cont = cloneProp(art, 'containers', 2.6);
       cont.position.set(3.3, 0, 2.2);
+      dep.position.y = cont.position.y = 0.15;
       this.root.add(dep, cont);
-      // Rochas espalhadas (só enfeite; posições fixas, longe da base).
+      this.decor = new YardDecor(art);
+      this.root.add(this.decor.root);
+      // Rochas espalhadas no deserto (só enfeite; posições fixas, longe da base). Nos outros
+      // biomas, as pedras vêm da flora.
       let sd = 31;
       const r = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296;
       const kinds: PropKind[] = ['rockA', 'rockB', 'rocks'];
-      for (let i = 0; i < 46; i++) {
+      for (let i = 0; i < (biome.id === 'deserto' ? 46 : 0); i++) {
         const a = r() * Math.PI * 2;
         const d = 22 + r() * 115;
         const x = Math.cos(a) * d;
@@ -385,8 +394,22 @@ export class World3D {
     this.perimeter.position.y = 0.05;
     this.root.add(this.perimeter);
 
+    if (floraArt) {
+      this.flora = new Flora(floraArt, biome, view.seed, view.nodes);
+      this.root.add(this.flora.root);
+    }
+    this.ambient = new Ambient(biome);
+    this.root.add(this.ambient.points);
+
     const max = c.horde.cap + LEAPERS;
     this.bugs = new BugSwarm(scene, max, FOG);
+    // Casco do bioma e a luz vindo do lado do sol.
+    const bu = this.bugs.material.uniforms;
+    bu.uColorA!.value.set(biome.bug[0]);
+    bu.uColorB!.value.set(biome.bug[1]);
+    bu.uLight!.value.set(...biome.sun.dir).normalize();
+    bu.uFogNear!.value = FOG.near;
+    bu.uFogFar!.value = FOG.far;
     this.bugPhase = new Float32Array(max);
     this.bugScale = new Float32Array(max);
     this.bugTone = new Float32Array(max);
@@ -457,107 +480,15 @@ export class World3D {
       this.gateOpen[g] = Math.abs(now - target) < 0.002 ? target : now;
       if (this.gateOpen[g] !== before) moving = true;
     }
-    const same =
-      this.wallSeen &&
-      this.wallCellsSeen &&
-      this.wallCellsSeen.length === v.wallCells.length &&
-      this.wallSeen.every((x, i) => x === v.wallHp[i]) &&
-      this.wallCellsSeen.every((x, i) => x === v.wallCells[i]);
-    if (!moving && same) return;
-    this.wallSeen = v.wallHp.slice();
-    this.wallCellsSeen = v.wallCells.slice();
-    const size = v.gridSize;
-    const half = size / 2;
-    const cellsSet = new Set<number>(v.wallCells);
-    let wi = 0;
-    let gi = 0;
-    for (let k = 0; k < v.wallCells.length; k++) {
-      const cell = v.wallCells[k]!;
-      const hp = v.wallHp[k]!;
-      const gate = v.wallGate[k]!;
-      const isGate = gate >= 0;
-      const rubble = v.wallTerrain[k] === RUBBLE || hp <= 0;
-      let y = WALL_H;
-      if (rubble) y = 0.35;
-      else if (isGate) y = WALL_H * 0.92 * (1 - this.gateOpen[gate]!) + 0.01;
-      this.tmp.position.set((cell % size) - half + 0.5, 0, Math.floor(cell / size) - half + 0.5);
-      // Parede do KayKit: o lado comprido acompanha a muralha (vizinho em x ou em z).
-      const along = cellsSet.has(cell - 1) || cellsSet.has(cell + 1);
-      this.tmp.rotation.set(0, this.art?.wall && !isGate && !along ? Math.PI / 2 : 0, 0);
-      this.tmp.scale.set(rubble ? 0.9 : 1, y, rubble ? 0.9 : 1);
-      this.tmp.updateMatrix();
-      const full = isGate ? (gate === 4 ? c.build.gate.hp : c.swarm.gateHp) : c.swarm.wallHp;
-      const f = rubble ? 0 : Math.min(1, hp / full);
-      if (isGate) {
-        if (gi >= MAX_GATES) continue;
-        this.col.setRGB(0.55 + 0.45 * f, 0.55 + 0.45 * f, 0.55 + 0.45 * f);
-        this.gateMesh.setMatrixAt(gi, this.tmp.matrix);
-        this.gateMesh.setColorAt(gi++, this.col);
-      } else {
-        if (wi >= MAX_WALLS) continue;
-        if (this.art?.wall) this.col.setRGB(0.35 + 0.65 * f, 0.35 + 0.65 * f, 0.35 + 0.65 * f);
-        else this.col.set('#4a463f').lerp(new THREE.Color('#8f8c84'), f);
-        this.wallMesh.setMatrixAt(wi, this.tmp.matrix);
-        this.wallMesh.setColorAt(wi++, this.col);
-      }
-    }
-    this.wallMesh.count = wi;
-    this.gateMesh.count = gi;
-    for (const m of [this.wallMesh, this.gateMesh]) {
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
-    }
+    void moving;
+    this.fortress.sync(v, this.gateOpen, closedPhase);
   }
 
   private makeTower(t: Tower): TowerView {
-    const root = new THREE.Group();
-    root.position.set(t.x, 0, t.z);
-    const fixed = t.buildingId < 0;
-    let baseH = fixed ? 5.4 : 3.2;
-    let base: THREE.Object3D;
-    if (this.art) {
-      const kind: PropKind = fixed ? 'torreCanto' : 'torre';
-      const foot = fixed ? 2.6 : 2;
-      base = cloneProp(this.art, kind, foot);
-      const p = this.art.props[kind];
-      baseH = (p.size.y * foot) / Math.max(p.size.x, p.size.z);
-    } else {
-      base = new THREE.Mesh(new THREE.BoxGeometry(fixed ? 2.2 : 1.9, baseH, fixed ? 2.2 : 1.9), this.mats.tower);
-      base.position.y = baseH / 2;
-    }
-    const head = new THREE.Group();
-    head.position.y = baseH + 0.6;
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 1.6), this.mats.metal);
-    const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 2.2, 6), this.mats.metal);
-    gun.rotation.z = Math.PI / 2;
-    gun.position.x = 1.1;
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), this.mats.lampOn);
-    lamp.position.set(-0.5, 0.55, 0);
-    head.add(top, gun, lamp);
-    // Nível 2: segundo cano; nível 3: cano grosso de canhão.
-    if (t.level >= 2) {
-      const g2 = gun.clone();
-      g2.position.z = 0.35;
-      gun.position.z = -0.35;
-      head.add(g2);
-    }
-    if (t.level >= 3) {
-      const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 1.6, 8), this.mats.metal);
-      cannon.rotation.z = Math.PI / 2;
-      cannon.position.set(0.9, 0.35, 0);
-      head.add(cannon);
-    }
-    for (let k = 1; k < t.level; k++) {
-      const ch = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.12), this.mats.chevron);
-      ch.position.set(-0.2, 0.5, 0.82 - (k - 1) * 0.0 - 0.0);
-      ch.position.y = -0.6 - k * 0.22;
-      ch.position.x = fixed ? 1.12 : 0.97;
-      ch.rotation.y = Math.PI / 2;
-      head.add(ch);
-    }
-    root.add(base, head);
-    this.root.add(root);
-    return { root, head, lamp, yaw: Math.atan2(-t.z, t.x), level: t.level };
+    const m = makeTowerModel(t.level, t.buildingId < 0);
+    m.root.position.set(t.x, 0, t.z);
+    this.root.add(m.root);
+    return { root: m.root, head: m.head, lamp: m.lamp, yaw: Math.atan2(-t.z, t.x), level: t.level };
   }
 
   private makeBuilding(b: Building): {
@@ -577,6 +508,10 @@ export class World3D {
     const root = new THREE.Group();
     outer.add(root);
     const s = b.size;
+    // Laje de concreto (fica parada; o corpo sobe em cima dela durante a obra).
+    const pad = makePad(s + 0.7, s + 0.7);
+    outer.add(pad);
+    root.position.y = 0.15;
     const parts: THREE.Mesh[] = [];
     let spin: THREE.Object3D | null = null;
     const add = (m: THREE.Mesh) => {
@@ -678,6 +613,8 @@ export class World3D {
 
   private syncBuildings(dt: number): void {
     const v = this.view;
+    this.decor?.sync(v.buildings);
+    this.flora?.sync(v.buildings, v.nodes);
     const seen = new Set<number>();
     for (const b of v.buildings) {
       if (b.kind === 'torre') continue;
@@ -719,6 +656,35 @@ export class World3D {
         this.buildingViews.delete(id);
       }
     }
+  }
+
+  /**
+   * Uma cusparada do cuspidor i: duas bolhas saem de cima do abdômen, fazem o arco por cima
+   * da cabeça e caem a `d` m à frente, na altura do meio da muralha; lá, um respingo.
+   */
+  private spit(i: number, x: number, z: number, h: number, d: number, scale: number, t: number): void {
+    if (this.spitAt.length <= i) {
+      const a = new Float32Array(Math.max(i + 1, this.bugs.max));
+      a.set(this.spitAt);
+      this.spitAt = a;
+    }
+    if (t < this.spitAt[i]!) return;
+    this.spitAt[i] = t + 0.65 + ((i * 0.37) % 0.4);
+    const ch = Math.cos(h);
+    const sh = Math.sin(h);
+    const ox = x - ch * 0.5 * scale;
+    const oz = z - sh * 0.5 * scale;
+    const oy = 1.15 * scale;
+    const T = 0.55;
+    const ty = 1.8;
+    const dist = d + 0.5 * scale;
+    for (let k = 0; k < 2; k++) {
+      const jit = (k - 0.5) * 0.25;
+      const vxz = dist / T;
+      const vy = (ty - oy) / T + 4.5 * T;
+      this.acid.emit(ox, oy, oz, ch * vxz - sh * jit, vy, sh * vxz + ch * jit, T, 0.55 - k * 0.15, 0);
+    }
+    if (this.splashes.length < 60) this.splashes.push({ at: t + T, x: x + ch * d, y: ty, z: z + sh * d });
   }
 
   /** Marcador de ordem: anel que abre e some no chão. */
@@ -832,7 +798,7 @@ export class World3D {
     }
     this.selRing.visible = r > 0;
     if (r > 0) {
-      this.selRing.position.set(x, 0.16, z);
+      this.selRing.position.set(x, 0.2, z);
       this.selRing.scale.setScalar(r);
     }
   }
@@ -914,7 +880,7 @@ export class World3D {
     for (let i = 0; i < shown; i++) {
       const layer = Math.floor(i / 16);
       const j = i % 16;
-      this.tmp.position.set(-1.8 + (j % 4) * 0.55, 0.37 + layer * 0.5, 1.6 + Math.floor(j / 4) * 0.55);
+      this.tmp.position.set(-1.8 + (j % 4) * 0.55, 0.4 + layer * 0.5, 1.6 + Math.floor(j / 4) * 0.55);
       this.tmp.rotation.set(0, (i * 0.7) % 0.4, 0);
       this.tmp.scale.setScalar(1);
       this.tmp.updateMatrix();
@@ -1206,8 +1172,22 @@ export class World3D {
     // Jato das mortes anda pelo tempo do jogo (para na pausa).
     const gdt = Math.max(0, Math.min(0.1, t - this.lastT));
     this.lastT = t;
+    this.ambient.update(performance.now() / 1000, this.camTarget.x, this.camTarget.y, this.pixelH);
     this.gore.material.uniforms.uScale!.value = this.pixelH * 0.9;
     this.gore.update(gdt);
+    this.acid.update(gdt);
+    // Respingos agendados (quando a bolha chega).
+    if (this.splashes.length) {
+      const keep: typeof this.splashes = [];
+      for (const sp of this.splashes) {
+        if (sp.at > t) {
+          keep.push(sp);
+          continue;
+        }
+        for (let k = 0; k < 5; k++) this.acid.emit(sp.x, sp.y, sp.z, (Math.random() - 0.5) * 3, 1.5 + Math.random() * 2, (Math.random() - 0.5) * 3, 0.5, 0.45, 0.8);
+      }
+      this.splashes = keep;
+    }
     this.syncWalls(dt);
     this.sites.update(view, t, this.cameraPos, this.pixelH);
     this.syncBuildings(dt);
@@ -1300,8 +1280,12 @@ export class World3D {
       const d2 = dx * dx + dz * dz + cy * cy;
       const lod = d2 < near2 ? 0 : d2 < mid2 ? 1 : 2;
       const kind = bugs[o + 7]!;
-      const scale = this.bugScale[i]! * (kind === 2 ? 1.35 : 1);
-      this.bugs.add(lod, x, z, bugs[o + 4]!, this.bugPhase[i]!, scale, 0.9, this.bugTone[i]!, st, bugs[o + 6]!, kind);
+      // Tamanho de cada espécie (Etapa 20): besouro grande, cuspidor um pouco maior.
+      const scale = this.bugScale[i]! * (kind === 2 ? 1.55 : kind === 4 ? 1.2 : kind === 3 ? 0.95 : 1);
+      const yy = bugs[o + 6]!;
+      this.bugs.add(lod, x, z, bugs[o + 4]!, this.bugPhase[i]!, scale, 0.9, this.bugTone[i]!, st, yy, kind);
+      // Cuspidor cuspindo (altura negativa = distância até o alvo), só os de perto e de meio.
+      if (kind === 4 && yy < 0 && st > 0.5 && st < 1.5 && lod < 2) this.spit(i, x, z, bugs[o + 4]!, -yy, scale, t);
       n++;
     }
     // Saltadores: os que pegam quem foi devorado fora dos muros.
@@ -1322,7 +1306,7 @@ export class World3D {
         const lj = left - j * 0.12;
         const L = Math.max(0, lj) * 9 + (lj <= 0 ? 0.55 : 0.4);
         const y = lj > 0 ? Math.sin(Math.min(1, lj / 1.4) * Math.PI) * 1.1 : 0.15;
-        this.bugs.add(0, x + ox * L, z + oz * L, Math.atan2(-oz, -ox), k.id + j, 1.35, 1.6, 0.2, lj <= 0 ? 1 : 0, y);
+        this.bugs.add(0, x + ox * L, z + oz * L, Math.atan2(-oz, -ox), k.id + j, 1.35, 1.6, 0.2, lj <= 0 ? 1 : 0, y, 3);
         n++;
       }
     }

@@ -11,10 +11,25 @@ const CA = 'KayKit Character Animations 1.1/Animations/gltf/Rig_Medium';
 const MM4 = 'KayKit Mystery Monthly Series 4 (1.1)';
 const MM5 = 'KayKit Mystery Monthly Series 5 (1.1)';
 const MM6 = 'KayKit Mystery Monthly Series 6 (1.1)';
+const FN = 'KayKit Forest Nature Pack 1.0/Assets/gltf';
+
+/** Flora dos biomas (Etapa 19): [pasta de cor, nome] do Forest Nature Pack. */
+export const FLORA: [string, string][] = [
+  ...[4, 6].flatMap((n) => [
+    ['Color2', `Tree_${n}_A_Color2`],
+    ['Color4', `Tree_${n}_A_Color4`],
+  ] as [string, string][]),
+  ['Color2', 'Bush_3_A_Color2'],
+  ...[1, 2, 3, 4, 5, 6].map((n) => ['Color1', `Rock_${n}_A_Color1`] as [string, string]),
+  ['Color2', 'Grass_1_A_Color2'],
+  ['Color2', 'Grass_2_A_Color2'],
+  ['Color1', 'Tree_Bare_1_A_Color1'],
+  ['Color1', 'Tree_Bare_2_A_Color1'],
+];
 
 /** [origem relativa à coleção, destino relativo a public/assets/kaykit] */
 export const ART: [string, string][] = [
-  ...['basemodule_A', 'basemodule_garage', 'cargodepot_A', 'containers_A', 'drill_structure', 'windturbine_tall', 'structure_low', 'structure_tall', 'rock_A', 'rock_B', 'rocks_A'].flatMap(
+  ...['basemodule_A', 'basemodule_garage', 'cargodepot_A', 'containers_A', 'drill_structure', 'windturbine_tall', 'structure_low', 'structure_tall', 'rock_A', 'rock_B', 'rocks_A', 'cargo_A_stacked', 'cargo_B_packed', 'containers_B'].flatMap(
     (n) => [
       [`${SB}/${n}.gltf`, `spacebase/${n}.gltf`],
       [`${SB}/${n}.bin`, `spacebase/${n}.bin`],
@@ -24,7 +39,7 @@ export const ART: [string, string][] = [
   [`${PB}/Wall.gltf`, 'prototype/Wall.gltf'],
   [`${PB}/Wall.bin`, 'prototype/Wall.bin'],
   [`${PB}/prototypebits_texture.png`, 'prototype/prototypebits_texture.png'],
-  ...['Stone_Chunks_Large', 'Copper_Nuggets', 'Gold_Nuggets'].flatMap(
+  ...['Stone_Chunks_Large', 'Copper_Nuggets', 'Gold_Nuggets', 'Containers_Crate_Large', 'Containers_Crate_Medium_Grey', 'Containers_Crate_Small_Green', 'Fuel_A_Barrels', 'Fuel_B_Barrels', 'Fuel_C_Barrels', 'Pallet_Wood_Covered_A'].flatMap(
     (n) => [
       [`${RB}/${n}.gltf`, `resource/${n}.gltf`],
       [`${RB}/${n}.bin`, `resource/${n}.bin`],
@@ -48,6 +63,11 @@ export const ART: [string, string][] = [
   [`${MM4}/9 - March 2024 - Survivalist/assets/gltf/backpack.gltf`, 'chars/backpack.gltf'],
   [`${MM4}/9 - March 2024 - Survivalist/assets/gltf/backpack.bin`, 'chars/backpack.bin'],
   [`${MM4}/9 - March 2024 - Survivalist/assets/gltf/survivalist_texture.png`, 'chars/survivalist_texture.png'],
+  ...FLORA.flatMap(([c, n]) => [
+    [`${FN}/${c}/${n}.gltf`, `forest/${n}.gltf`],
+    [`${FN}/${c}/${n}.bin`, `forest/${n}.bin`],
+  ] as [string, string][]),
+  [`${FN}/Color1/forest_texture.png`, 'forest/forest_texture.png'],
   [`${CA}/Rig_Medium_General.glb`, 'anims/Rig_Medium_General.glb'],
   [`${CA}/Rig_Medium_MovementBasic.glb`, 'anims/Rig_Medium_MovementBasic.glb'],
   [`${CA}/Rig_Medium_CombatRanged.glb`, 'anims/Rig_Medium_CombatRanged.glb'],

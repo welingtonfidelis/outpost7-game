@@ -35,6 +35,25 @@ export const B_DYING = 3;
 export const B_DIG = 4;
 export const B_UNDER = 5;
 
+/**
+ * Espécies (Etapa 20). O código 1 fica para a aparência do escavador (que é corredor).
+ */
+export const SP_RUN = 0;
+export const SP_BEETLE = 2;
+export const SP_LEAPER = 3;
+export const SP_SPITTER = 4;
+
+/** Fração de uma espécie na onda. */
+export function speciesShare(s: { from: number; share: number; perWave: number; max: number }, wave: number): number {
+  return wave < s.from ? 0 : Math.min(s.max, s.share + s.perWave * (wave - s.from));
+}
+
+/** Vida, velocidade e mordida de cada código de espécie. */
+export function speciesStats(c: Config, sp: number): { hp: number; speed: number; bite: number } {
+  const S = c.species;
+  return sp === SP_BEETLE ? S.besouro : sp === SP_LEAPER ? S.saltador : sp === SP_SPITTER ? S.cuspidor : S.corredor;
+}
+
 const DYING_TIME = 1.5;
 const COARSE = 8;
 
@@ -122,6 +141,10 @@ export interface Swarm {
   climbOrigins: number[];
   /** Túnel de cada inseto escavador (-1: não é escavador). */
   dig: Int16Array;
+  /** Espécie (SP_*), relógio do pulo (> 0 no ar, < 0 recarga) e alvo (pulo: altura; cuspe: distância). */
+  sp: Uint8Array;
+  leap: Float32Array;
+  aim: Float32Array;
 }
 
 export function cellCenter(sw: Swarm, c: number): { x: number; z: number } {
@@ -256,6 +279,9 @@ export function makeSwarm(cfg: Config): Swarm {
     plugSig: 0,
     unitNear: new Int16Array(NC),
     unitNearList: [],
+    sp: new Uint8Array(max),
+    leap: new Float32Array(max),
+    aim: new Float32Array(max),
     pile: new Float32Array(NC),
     pressN: new Uint16Array(NC),
     pressTick: new Int32Array(NC).fill(-1),
@@ -515,6 +541,9 @@ export function spawnWave(w: World): void {
     packs.push({ x: px / l, z: pz / l, spread: ai.spreadMin + rand(w) * (ai.spreadMax - ai.spreadMin), delay: p === 0 ? 0 : rand(w) * ai.surge });
   }
   const hunters = Math.min(ai.huntersMax, ai.hunters + ai.huntersPerWave * w.wave);
+  const shB = speciesShare(c.species.besouro, w.wave);
+  const shL = speciesShare(c.species.saltador, w.wave);
+  const shS = speciesShare(c.species.cuspidor, w.wave);
   for (let i = 0; i < n; i++) {
     // Direção ao acaso no disco unitário, normalizada (só sqrt).
     let dx = 0;
@@ -557,6 +586,20 @@ export function spawnWave(w: World): void {
     sw.role[i] = i >= diggers && rand(w) < hunters ? 1 : 0;
     sw.bias[i] = rand(w) * 2 - 1;
     sw.phase[i] = rand(w);
+    // Espécie (Etapa 20): o escavador é sempre corredor.
+    let spc = SP_RUN;
+    if (i >= diggers) {
+      const r = rand(w);
+      if (r < shB) spc = SP_BEETLE;
+      else if (r < shB + shL) spc = SP_LEAPER;
+      else if (r < shB + shL + shS) spc = SP_SPITTER;
+    }
+    const ss = speciesStats(c, spc);
+    sw.sp[i] = spc;
+    sw.hp[i] = sw.hp[i]! * ss.hp;
+    sw.speed[i] = sw.speed[i]! * ss.speed;
+    sw.leap[i] = 0;
+    sw.aim[i] = 0;
   }
   for (let i = n; i < sw.n; i++) sw.state[i] = B_NONE;
   sw.n = n;
@@ -707,13 +750,18 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
   });
   const unitBites = new Uint8Array(w.units.length);
   const biteK = bugScale(c, w.wave).bite;
-  const biteUnit = (idx: number): boolean => {
+  // Mordida de cada espécie (índice = código SP_*; 1 é o escavador, que é corredor).
+  const S = c.species;
+  const BITE = [S.corredor.bite, S.corredor.bite, S.besouro.bite, S.saltador.bite, S.cuspidor.bite];
+  const LEAP = S.saltador.leap;
+  const SPIT = S.cuspidor.spit;
+  const biteUnit = (idx: number, k = 1): boolean => {
     const u = w.units[idx]!;
     if (u.dead) return false;
     const uc = c.units[u.kind];
     if (unitBites[idx]! >= uc.biteSlots) return true;
     unitBites[idx]!++;
-    u.hp -= c.units.bite * biteK * dt;
+    u.hp -= c.units.bite * biteK * dt * k;
     if (u.hp <= 0) {
       u.hp = 0;
       u.dead = true;
@@ -783,6 +831,19 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
   const maxCheck = c.swarm.maxCheck;
   const danger2 = c.dangerRadius * c.dangerRadius;
   const reachU2 = c.units.reach * c.units.reach;
+  /** Dano numa célula de muralha ou portão; zerou, vira escombro (brecha). */
+  const hitWall = (cell: number, dmg: number) => {
+    if (terrain[cell] !== WALL && terrain[cell] !== GATE) return;
+    wallHp[cell] = wallHp[cell]! - dmg;
+    if (wallHp[cell]! <= 0) {
+      wallHp[cell] = 0;
+      terrain[cell] = RUBBLE;
+      sw.flowDirty = true;
+      w.stats.breaches++;
+      const cc = cellCenter(sw, cell);
+      w.events.push({ type: 'breach', x: cc.x, z: cc.z });
+    }
+  };
   const edge = half - 1;
   const ai = c.ai;
   const calm10 = ai.calm * 10;
@@ -858,6 +919,32 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
       sw.heading[i] = Math.atan2(dz, dx);
       continue;
     }
+    const spc = sw.sp[i]!;
+    // Saltador no ar por cima da muralha (Etapa 20): voa reto, sem bater em nada.
+    if (sw.leap[i]! > 0 && sw.aim[i]! >= 3) {
+      x[i] = x[i]! + vx[i]! * dt;
+      z[i] = z[i]! + vz[i]! * dt;
+      sw.leap[i] = sw.leap[i]! - dt;
+      if (sw.leap[i]! <= 0) {
+        const cc = cellAt(sw, x[i]!, z[i]!);
+        // Caiu ainda em cima de algo: segue no ar mais um tick.
+        if (cc >= 0 && (blocked(sw, cc) || terrain[cc] === WALL || terrain[cc] === GATE)) sw.leap[i] = dt;
+        else {
+          sw.leap[i] = -LEAP.every;
+          sw.aim[i] = 0;
+          state[i] = B_WALK;
+        }
+      }
+      continue;
+    }
+    // Relógio do pulo: no ar desconta; na recarga volta para zero.
+    if (sw.leap[i]! > 0) {
+      sw.leap[i] = sw.leap[i]! - dt;
+      if (sw.leap[i]! <= 0) {
+        sw.leap[i] = -LEAP.every;
+        sw.aim[i] = 0;
+      }
+    } else if (sw.leap[i]! < 0) sw.leap[i] = Math.min(0, sw.leap[i]! + dt);
     const xi = x[i]!;
     const zi = z[i]!;
     const r2 = xi * xi + zi * zi;
@@ -912,15 +999,15 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
         // No núcleo: morde.
         state[i] = B_BITE;
         const before = w.core;
-        w.core = Math.max(0, w.core - c.swarm.biteCore * biteK * dt);
+        w.core = Math.max(0, w.core - c.swarm.biteCore * biteK * dt * BITE[spc]!);
         w.stats.coreDamage += before - w.core;
         vx[i] = vx[i]! * 0.5;
         vz[i] = vz[i]! * 0.5;
         continue;
       }
     }
-    // Caçador perto de uma tropa no mapa: vai nela (sem desvio).
-    if (sw.role[i] === 1 && nHunt > 0) {
+    // Caçador (ou saltador) perto de uma tropa no mapa: vai nela (sem desvio).
+    if ((sw.role[i] === 1 || spc === SP_LEAPER) && nHunt > 0) {
       let best = chase2;
       let bx = 0;
       let bz = 0;
@@ -939,7 +1026,40 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
         fx = bx / d;
         fz = bz / d;
         spread = 0;
+        // Saltador: bote quando a tropa está perto e o pulo recarregou.
+        if (spc === SP_LEAPER && sw.leap[i] === 0 && best < LEAP.range * LEAP.range) {
+          sw.leap[i] = LEAP.time;
+          sw.aim[i] = 1.2;
+        }
       }
+    }
+    // Cuspidor (Etapa 20): olha adiante pelo caminho; com muralha, portão fechado ou prédio a
+    // até `spit.range` m, para e cospe ácido.
+    if (spc === SP_SPITTER && !outside) {
+      let tgt = -1;
+      let tk = 0;
+      for (let k = 1; k <= SPIT.range; k++) {
+        const cc = cellAt(sw, xi + fx * k, zi + fz * k);
+        if (cc < 0) break;
+        const tt = terrain[cc];
+        if (tt === WALL || tt === STRUCT || (tt === GATE && blocked(sw, cc))) {
+          tgt = cc;
+          tk = k;
+          break;
+        }
+      }
+      if (tgt >= 0) {
+        state[i] = B_BITE;
+        sw.aim[i] = tk;
+        const dmg = SPIT.dps * biteK * dt;
+        if (terrain[tgt] === STRUCT) damageBuilding(w, sw.structOf[tgt]! - 1, dmg);
+        else hitWall(tgt, dmg);
+        vx[i] = vx[i]! * 0.1;
+        vz[i] = vz[i]! * 0.1;
+        sw.heading[i] = Math.atan2(fz, fx);
+        continue;
+      }
+      sw.aim[i] = 0;
     }
     const ph = sw.phase[i]!;
     if (spread > 0) {
@@ -952,6 +1072,8 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
       fz = gz / gl;
     }
     let top = t < sw.wake[i]! && r2 > danger2 ? sw.slow[i]! : sw.speed[i]!;
+    // No bote do saltador: bem mais rápido.
+    if (sw.leap[i]! > 0) top *= LEAP.speed;
     // Ritmo que oscila: uns aceleram, outros freiam.
     top *= 1 + ai.pace * wave(ph * 3.1 + t * 0.37);
     // Em cima da muralha (pilha): devagar.
@@ -1007,7 +1129,7 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
       const u = w.units[near - 1]!;
       const ddx = nx - u.x;
       const ddz = nz - u.z;
-      if (!u.dead && ddx * ddx + ddz * ddz < reachU2 && biteUnit(near - 1)) {
+      if (!u.dead && ddx * ddx + ddz * ddz < reachU2 && biteUnit(near - 1, BITE[spc]!)) {
         state[i] = B_BITE;
         vx[i] = nvx * 0.1;
         vz[i] = nvz * 0.1;
@@ -1016,13 +1138,36 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
     }
     if (next >= 0 && sw.plug[next]! > 0) {
       // Brecha tampada por robô: morde o robô.
-      biteUnit(sw.plug[next]! - 1);
+      biteUnit(sw.plug[next]! - 1, BITE[spc]!);
       state[i] = B_BITE;
       vx[i] = nvx * 0.1;
       vz[i] = nvz * 0.1;
       continue;
     }
     if (next >= 0 && blocked(sw, next)) {
+      // Saltador com a pilha alta encostada: pula por cima da muralha ou do portão.
+      if (spc === SP_LEAPER && sw.leap[i] === 0 && (terrain[next] === WALL || terrain[next] === GATE) && sw.pile[next]! >= LEAP.pile) {
+        const vl = Math.sqrt(nvx * nvx + nvz * nvz) || 1;
+        const ux = nvx / vl;
+        const uz = nvz / vl;
+        let land = 0;
+        for (let k = 2; k <= LEAP.over; k++) {
+          const cc = cellAt(sw, xi + ux * k, zi + uz * k);
+          if (cc >= 0 && !blocked(sw, cc) && terrain[cc] !== WALL && terrain[cc] !== GATE) {
+            land = k;
+            break;
+          }
+        }
+        if (land > 0) {
+          state[i] = B_WALK;
+          sw.leap[i] = LEAP.time;
+          sw.aim[i] = 4.6;
+          vx[i] = (ux * land) / LEAP.time;
+          vz[i] = (uz * land) / LEAP.time;
+          sw.heading[i] = Math.atan2(uz, ux);
+          continue;
+        }
+      }
       // Morde a muralha, o portão fechado ou o prédio. Só uns poucos cabem na frente de cada
       // célula; os de trás esperam (empurram, mas não fazem dano).
       state[i] = B_BITE;
@@ -1044,22 +1189,14 @@ export function stepSwarm(w: World, dt: number, killWorker: (k: Worker) => void)
       if (terrain[next] === STRUCT) {
         const bid = sw.structOf[next]! - 1;
         crowdNow.set(bid, (crowdNow.get(bid) ?? 0) + 1);
-        if (biting) damageBuilding(w, bid, c.swarm.biteWall * biteK * dt);
+        if (biting) damageBuilding(w, bid, c.swarm.biteWall * biteK * dt * BITE[spc]!);
         vx[i] = nvx * 0.1;
         vz[i] = nvz * 0.1;
         continue;
       }
-      wallHp[next] = wallHp[next]! - (biting ? c.swarm.biteWall * biteK * dt : 0);
+      if (biting) hitWall(next, c.swarm.biteWall * biteK * dt * BITE[spc]!);
       vx[i] = nvx * 0.1;
       vz[i] = nvz * 0.1;
-      if (wallHp[next]! <= 0) {
-        wallHp[next] = 0;
-        terrain[next] = RUBBLE;
-        sw.flowDirty = true;
-        w.stats.breaches++;
-        const cc = cellCenter(sw, next);
-        w.events.push({ type: 'breach', x: cc.x, z: cc.z });
-      }
     } else {
       state[i] = B_WALK;
       x[i] = nx;

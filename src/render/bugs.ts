@@ -1,9 +1,10 @@
 /**
- * Enxame instanciado com três níveis de detalhe ao mesmo tempo (perto, meio, longe): cada
- * nível tem o seu buffer e o seu draw call, e quem chama escolhe o nível de cada inseto.
- * Cada instância tem 12 floats: (x, z, direção, fase | escala, ritmo, tom, estado |
- * altura, tipo, -, -). Estado: 0 anda, 1 ataca, 2..3 morrendo. Tipo: 0 comum, 1 escavador,
- * 2 grande. As patas andam no vertex shader, sem esqueleto.
+ * Enxame instanciado: quatro espécies (Etapa 20) × três níveis de detalhe (perto, meio,
+ * longe), cada par com o seu buffer e o seu draw call; quem chama escolhe o nível de cada
+ * inseto, e o tipo escolhe a espécie. Cada instância tem 12 floats: (x, z, direção, fase |
+ * escala, ritmo, tom, estado | altura, tipo, -, -). Estado: 0 anda, 1 ataca, 2..3 morrendo.
+ * Tipo: 0 corredor, 1 escavador (malha do corredor), 2 besouro, 3 saltador, 4 cuspidor.
+ * As patas andam no vertex shader, sem esqueleto.
  */
 import * as THREE from 'three';
 import { buildBugGeometry, triangleCount } from './bugMesh.ts';
@@ -47,9 +48,12 @@ void main() {
     p = vec3(p.x, c * (p.y - 0.3) - s2 * p.z + 0.3, s2 * (p.y - 0.3) + c * p.z);
     p.y -= fade * 0.6;
   }
+  // Cuspidor cuspindo: as bolsas acesas pulsam.
+  if (aShade > 1.5 && aInst3.y > 3.5) p.y += attacking * 0.05 * sin(ph * 2.0);
   p *= aInst2.x;
   float c = cos(aInst.z), s = sin(aInst.z);
-  vec3 wp = vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + vec3(aInst.x, aInst3.x, aInst.y);
+  // Altura negativa é a distância do cuspe (para a tela), não altura.
+  vec3 wp = vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + vec3(aInst.x, max(0.0, aInst3.x), aInst.y);
   vN = vec3(c * normal.x - s * normal.z, normal.y, s * normal.x + c * normal.z);
   vTone = aInst2.z;
   vDying = dying;
@@ -61,6 +65,7 @@ void main() {
 }`;
 
 const FRAG = /* glsl */ `
+uniform float uTime;
 uniform vec3 uLight;
 uniform vec3 uFogColor;
 uniform float uFogNear;
@@ -76,21 +81,45 @@ varying float vKind;
 void main() {
   vec3 n = normalize(vN);
   vec3 base = mix(uColorA, uColorB, vTone);
-  // Escavador: marrom de terra; grande: mais escuro, com reflexo arroxeado.
-  base = mix(base, vec3(0.42, 0.29, 0.17), step(0.5, vKind) * (1.0 - step(1.5, vKind)));
-  base = mix(base, vec3(0.16, 0.13, 0.19), step(1.5, vKind));
-  base *= 1.0 + vShade * 0.28;
-  base = mix(base, vec3(0.32, 0.36, 0.22), vDying * 0.5);
+  // Escavador: marrom de terra; grande: mais escuro, com reflexo arroxeado. (Cores em
+  // espaço linear: a saída passa para sRGB no fim.)
+  base = mix(base, vec3(0.15, 0.07, 0.025), step(0.5, vKind) * (1.0 - step(1.5, vKind)));
+  base = mix(base, vec3(0.022, 0.015, 0.03), step(1.5, vKind));
+  // Espécies (Etapa 20): besouro mais escuro e lustroso; saltador mais claro; cuspidor
+  // puxado para um oliva doentio.
+  float beetle = step(1.5, vKind) * (1.0 - step(2.5, vKind));
+  float leaper = step(2.5, vKind) * (1.0 - step(3.5, vKind));
+  float spitter = step(3.5, vKind);
+  base *= 1.0 - beetle * 0.3;
+  base = base * (1.0 + leaper * 0.35) + leaper * vec3(0.012, 0.01, 0.0);
+  base = mix(base, vec3(0.09, 0.08, 0.02), spitter * 0.35);
+  base *= 1.0 + clamp(vShade, -1.0, 1.0) * 0.28;
+  base = mix(base, vec3(0.084, 0.106, 0.04), vDying * 0.5);
   float d = max(dot(n, uLight), 0.0) * 0.85 + 0.28;
   float rim = pow(1.0 - abs(n.y), 3.0) * 0.12;
   // Brilho de casca nas placas.
-  float spec = pow(max(dot(reflect(-uLight, n), vec3(0.0, 1.0, 0.0)), 0.0), 12.0) * 0.25 * max(0.0, vShade);
+  float spec = pow(max(dot(reflect(-uLight, n), vec3(0.0, 1.0, 0.0)), 0.0), 12.0) * 0.25 * clamp(vShade, 0.0, 1.0) * (1.0 + beetle * 1.6);
   vec3 col = base * d + rim + spec;
+  // Brilho próprio: olhos cor de brasa; bolsas de ácido do cuspidor, verde-amarelo, pulsando.
+  if (vShade > 1.5) {
+    vec3 glow = mix(vec3(1.0, 0.28, 0.06), vec3(0.55, 1.0, 0.08), spitter);
+    col = glow * (0.8 + 0.3 * sin(uTime * 5.0 + vTone * 20.0)) * (1.0 - vDying * 0.85);
+  }
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
   gl_FragColor = vec4(mix(col, uFogColor, f), 1.0);
+  // Mesma grade de cor e saída sRGB do resto da cena (Etapa 19).
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
 }`;
 
 export const FLOATS_PER_BUG = 12;
+/** Malhas por espécie: corredor (e escavador), besouro, saltador, cuspidor. */
+const SPECIES = 4;
+const SPECIES_CODE = [0, 2, 3, 4];
+/** Tipo do inseto → malha da espécie. */
+function speciesMesh(kind: number): number {
+  return kind >= 4 ? 3 : kind >= 3 ? 2 : kind >= 2 ? 1 : 0;
+}
 
 export class BugSwarm {
   readonly max: number;
@@ -100,7 +129,8 @@ export class BugSwarm {
   private datas: Float32Array[] = [];
   private buffers: THREE.InstancedInterleavedBuffer[] = [];
   private geos: THREE.InstancedBufferGeometry[] = [];
-  private counts = [0, 0, 0];
+  /** Por malha (espécie × nível): índice = espécie * 3 + nível. */
+  private counts: number[] = new Array(SPECIES * 3).fill(0);
   private detail: BugDetail = 1;
   count = 0;
 
@@ -119,8 +149,9 @@ export class BugSwarm {
         uColorB: { value: new THREE.Color('#4a5935') },
       },
     });
+    for (let sp = 0; sp < SPECIES; sp++)
     for (const d of [0, 1, 2] as BugDetail[]) {
-      const base = buildBugGeometry(d);
+      const base = buildBugGeometry(d, SPECIES_CODE[sp]);
       this.triangles.push(triangleCount(base));
       const data = new Float32Array(max * FLOATS_PER_BUG);
       const buf = new THREE.InstancedInterleavedBuffer(data, FLOATS_PER_BUG);
@@ -150,7 +181,7 @@ export class BugSwarm {
     return this.detail;
   }
 
-  /** Buffer do nível único (a medição escreve direto nele). */
+  /** Buffer do nível único (a medição escreve direto nele; só corredor). */
   get data(): Float32Array {
     return this.datas[this.detail]!;
   }
@@ -176,7 +207,7 @@ export class BugSwarm {
 
   /** Modo de um nível só: manda as primeiras n instâncias. */
   upload(n: number, time: number): void {
-    this.counts = [0, 0, 0];
+    this.counts.fill(0);
     this.counts[this.detail] = Math.min(n, this.max);
     this.count = this.counts[this.detail]!;
     this.commitCounts(time);
@@ -184,25 +215,26 @@ export class BugSwarm {
 
   /** Modo com LOD: zera os três níveis. */
   begin(): void {
-    this.counts = [0, 0, 0];
+    this.counts.fill(0);
   }
 
   /** Modo com LOD: põe um inseto no nível escolhido. */
   add(lod: BugDetail, x: number, z: number, heading: number, phase: number, scale: number, pace: number, tone: number, state: number, y = 0, kind = 0): void {
-    const i = this.counts[lod]!;
+    const m = speciesMesh(kind) * 3 + lod;
+    const i = this.counts[m]!;
     if (i >= this.max) return;
-    this.write(this.datas[lod]!, i, x, z, heading, phase, scale, pace, tone, state, y, kind);
-    this.counts[lod] = i + 1;
+    this.write(this.datas[m]!, i, x, z, heading, phase, scale, pace, tone, state, y, kind);
+    this.counts[m] = i + 1;
   }
 
   /** Modo com LOD: manda tudo para a GPU. */
   commit(time: number): void {
-    this.count = this.counts[0]! + this.counts[1]! + this.counts[2]!;
+    this.count = this.counts.reduce((a, n) => a + n, 0);
     this.commitCounts(time);
   }
 
   private commitCounts(time: number): void {
-    for (let d = 0; d < 3; d++) {
+    for (let d = 0; d < this.counts.length; d++) {
       const n = this.counts[d]!;
       const buf = this.buffers[d]!;
       if (n > 0) {
