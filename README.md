@@ -7,6 +7,9 @@ segura a horda são as muralhas, as torres, os soldados e os fortins que você e
 Feito em TypeScript com Three.js e Preact. A horda roda num Web Worker, com simulação
 determinística a 20 ticks por segundo.
 
+**Jogar:** https://welingtonfidelis.github.io/outpost7-game/ (publicado pelo GitHub Pages a cada push na
+`main`, em `.github/workflows/pages.yml`).
+
 ## Rodar
 
 ```bash
