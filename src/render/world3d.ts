@@ -22,10 +22,25 @@ import type { Biome } from './biome.ts';
 import { Flora } from './flora.ts';
 import type { FloraArt } from './flora.ts';
 import { Ambient } from './ambient.ts';
+import { ShotFx } from './shotFx.ts';
 
 const RING_COLORS = ['#9aa6b4', '#c8703f', '#e8c547'];
 const CUBES_PER_NODE = 6;
 const LEAPERS = 32;
+/** Lugares de tiro: um laço por torre e o anel dos disparos das tropas. */
+const TOWER_FX = 64;
+const SHOT_FX = 512;
+/** Tamanho do px do clarão da torre (m). */
+const TOWER_PX = 0.05;
+/**
+ * Disparos de enfeite das tropas (o dano da simulação é contínuo): intervalo médio (s),
+ * tamanho do px do clarão (m) e, sem o boneco do KayKit, onde fica a ponta da arma.
+ */
+const GUN: Record<UnitKind, { every: number; px: number; reach: number; y: number }> = {
+  soldado: { every: 0.32, px: 0.026, reach: 0.8, y: 1.15 },
+  atirador: { every: 1.1, px: 0.034, reach: 1.35, y: 1.15 },
+  robo: { every: 0.16, px: 0.036, reach: 1.6, y: 1.75 },
+};
 
 function stripes(): THREE.CanvasTexture {
   const cv = document.createElement('canvas');
@@ -119,6 +134,8 @@ interface UnitView {
   heading: number;
   walk: number;
   dead: boolean;
+  /** Hora (tempo de jogo) do próximo disparo de enfeite. */
+  nextShot: number;
 }
 
 interface TowerView {
@@ -156,7 +173,11 @@ export class World3D {
   private towers = new Map<number, TowerView>();
   private units = new Map<number, UnitView>();
   private rallyMarks: Record<UnitKind, THREE.Mesh>;
-  private tracers: THREE.LineSegments;
+  /** Tiros (Etapa 21): clarões do pixelfx; um laço por torre (índice por slot) e os disparos das tropas. */
+  private shots: ShotFx;
+  private towerFx = new Map<number, number>();
+  private fxFree: number[] = [];
+  private muzzleAt = new THREE.Vector3();
   private mats: Record<string, THREE.Material>;
   private geos: Record<string, THREE.BufferGeometry>;
   readonly bugs: BugSwarm;
@@ -247,7 +268,6 @@ export class World3D {
       pingDeath: new THREE.MeshBasicMaterial({ color: '#ff3b2a', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
       cube: new THREE.MeshLambertMaterial({ color: '#ffffff' }),
       perimeter: new THREE.MeshBasicMaterial({ color: '#e5402a', transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }),
-      tracer: new THREE.LineBasicMaterial({ color: '#ffe08a', transparent: true, opacity: 0.85 }),
       lampOn: new THREE.MeshBasicMaterial({ color: '#ffd23a' }),
       lampOff: new THREE.MeshBasicMaterial({ color: '#3a3a3a' }),
       genBody: new THREE.MeshLambertMaterial({ color: '#4f6b5b' }),
@@ -324,12 +344,10 @@ export class World3D {
     this.ghost.visible = false;
     this.root.add(this.ghost);
 
-    const maxShooters = 64 + c.units.soldado.max + c.units.robo.max;
-    const tg = new THREE.BufferGeometry();
-    tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxShooters * 6), 3));
-    this.tracers = new THREE.LineSegments(tg, this.mats.tracer);
-    this.tracers.frustumCulled = false;
-    this.root.add(this.tracers);
+    // Tiros: clarões de cano numa malha instanciada só (Etapa 21).
+    this.shots = new ShotFx(TOWER_FX, SHOT_FX);
+    for (let i = TOWER_FX - 1; i >= 0; i--) this.fxFree.push(i);
+    this.root.add(this.shots.mesh);
 
     // Depósito no centro e a pilha do minério guardado.
     if (art) {
@@ -973,7 +991,7 @@ export class World3D {
       root.add(char.root, shadow);
       this.root.add(root);
       const dummy = new THREE.Object3D();
-      return { char, kind, root, body, legL: dummy, legR: dummy, heading: 0, walk: 0, dead: false };
+      return { char, kind, root, body, legL: dummy, legR: dummy, heading: 0, walk: 0, dead: false, nextShot: 0 };
     }
     let legL: THREE.Object3D;
     let legR: THREE.Object3D;
@@ -1019,7 +1037,7 @@ export class World3D {
     if (kind === 'robo') shadow.scale.setScalar(2);
     root.add(body, shadow);
     this.root.add(root);
-    return { char: null, kind, root, body, legL, legR, heading: 0, walk: 0, dead: false };
+    return { char: null, kind, root, body, legL, legR, heading: 0, walk: 0, dead: false, nextShot: 0 };
   }
 
   private syncUnit(u: Unit, alpha: number, dt: number): void {
@@ -1083,11 +1101,7 @@ export class World3D {
   }
 
   private syncTowers(t: number, dt: number): void {
-    const pos = this.tracers.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const arr = pos.array as Float32Array;
     const present = new Set<number>();
-    let k = 0;
-    const maxT = arr.length / 6;
     for (const tw of this.view.towers) {
       present.add(tw.slot);
       let tv = this.towers.get(tw.slot);
@@ -1115,54 +1129,61 @@ export class World3D {
         tv.yaw += d * Math.min(1, dt * 14);
       }
       tv.head.rotation.y = tv.yaw;
-      if (k >= maxT) continue;
-      const show = firing && Math.sin(t * 60 + tw.slot * 1.7) > -0.3;
-      const o = k * 6;
-      k++;
-      const hy = tv.head.position.y;
-      arr[o] = tw.x + Math.cos(tv.yaw) * 2.1;
-      arr[o + 1] = hy;
-      arr[o + 2] = tw.z - Math.sin(tv.yaw) * 2.1;
-      arr[o + 3] = show ? tw.tx : arr[o]!;
-      arr[o + 4] = show ? 0.45 : hy;
-      arr[o + 5] = show ? tw.tz : arr[o + 2]!;
+      // Rajada em laço na ponta do cano (a mesma conta do modelo em fortress.ts).
+      let fx = this.towerFx.get(tw.slot);
+      if (fx === undefined) {
+        fx = this.fxFree.pop() ?? -1;
+        this.towerFx.set(tw.slot, fx);
+      }
+      const reach = 0.7 * (tw.buildingId < 0 ? 1 : 0.85) + 1.55;
+      const mx = tw.x + Math.cos(tv.yaw) * reach;
+      const my = tv.head.position.y * tv.root.scale.y;
+      const mz = tw.z - Math.sin(tv.yaw) * reach;
+      this.shots.loop(fx, firing, mx, my, mz, tw.tx - mx, 0.45 - my, tw.tz - mz, TOWER_PX, t);
     }
     for (const [slot, tv] of this.towers) {
       if (!present.has(slot)) {
         this.root.remove(tv.root);
         this.towers.delete(slot);
+        const fx = this.towerFx.get(slot) ?? -1;
+        this.towerFx.delete(slot);
+        if (fx >= 0) {
+          this.shots.clearLoop(fx);
+          this.fxFree.push(fx);
+        }
       }
     }
-    // Traços dos soldados e robôs.
-    const max = maxT;
+  }
+
+  /** Disparos dos soldados, atiradores e robôs: um clarão de pistola a cada tanto, na ponta da arma. */
+  private syncUnitShots(t: number): void {
+    const at = this.muzzleAt;
     for (const u of this.view.units) {
-      if (k >= max) break;
       const v = this.units.get(u.id);
-      const o = k * 6;
-      k++;
-      const firing = !u.dead && u.target >= 0 && v !== undefined;
-      const show = firing && Math.sin(t * (u.kind === 'robo' ? 25 : 45) + u.id * 2.1) > 0;
-      let hx = v ? v.root.position.x : u.x;
-      let hz = v ? v.root.position.z : u.z;
-      let hy = u.kind === 'robo' ? 1.75 : 1.15;
+      if (!v) continue;
+      const gun = GUN[u.kind];
+      // Tempo voltou (partida carregada): recomeça a contagem.
+      if (v.nextShot - t > 2) v.nextShot = t;
+      if (u.dead || u.target < 0) {
+        // Parado: o primeiro tiro sai logo que achar alvo, cada um num instante diferente.
+        v.nextShot = Math.max(v.nextShot, t + ((u.id * 0.618) % 1) * 0.15);
+        continue;
+      }
+      if (t < v.nextShot) continue;
+      v.nextShot = t + gun.every * (0.8 + 0.4 * Math.random());
       if (u.inside >= 0) {
         // Da seteira do fortim, do lado do alvo.
         const dx = u.tx - u.x;
         const dz = u.tz - u.z;
         const l = Math.hypot(dx, dz) || 1;
-        hx = u.x + (dx / l) * 1.35;
-        hz = u.z + (dz / l) * 1.35;
-        hy = 0.86;
+        at.set(u.x + (dx / l) * 1.35, 0.86, u.z + (dz / l) * 1.35);
+      } else if (v.char?.muzzle) {
+        v.char.muzzle.getWorldPosition(at);
+      } else {
+        at.set(v.root.position.x + Math.sin(v.heading) * gun.reach, gun.y, v.root.position.z + Math.cos(v.heading) * gun.reach);
       }
-      arr[o] = hx;
-      arr[o + 1] = hy;
-      arr[o + 2] = hz;
-      arr[o + 3] = show ? u.tx : hx;
-      arr[o + 4] = show ? 0.45 : hy;
-      arr[o + 5] = show ? u.tz : hz;
+      this.shots.shot(at.x, at.y, at.z, u.tx - at.x, 0.45 - at.y, u.tz - at.z, gun.px, t);
     }
-    for (; k < max; k++) arr.fill(0, k * 6, k * 6 + 6);
-    pos.needsUpdate = true;
   }
 
   update(view: WorldView, bugs: Float32Array, t: number, alpha: number, dt: number, snapId = 0): void {
@@ -1229,6 +1250,8 @@ export class World3D {
       if (r) m.position.set(r.x, 0.08 + (kind === 'robo' ? 0.01 : 0), r.z);
     }
     this.syncTowers(t, dt);
+    this.syncUnitShots(t);
+    this.shots.update(t);
     for (const wv of this.workers.values()) wv.char?.update(dt);
     for (const uv of this.units.values()) uv.char?.update(dt);
     // Enxame (do buffer do worker), com o nível de detalhe pela distância até a câmera.

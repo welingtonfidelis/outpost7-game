@@ -9,7 +9,8 @@
     "typecheck": "tsc",
     "test": "vitest run",
     "balance": "node tools/balance.ts",
-    "art": "node tools/import-art.ts"
+    "art": "node tools/import-art.ts",
+    "fx": "node tools/bake-fx.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

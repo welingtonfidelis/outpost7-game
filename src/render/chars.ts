@@ -24,6 +24,8 @@ export class CharView {
   private actions = new Map<Anim, THREE.AnimationAction>();
   private current: Anim | null = null;
   readonly cargo: THREE.Object3D | null = null;
+  /** Ponta do cano da arma (presa na arma), de onde sai o clarão do tiro (Etapa 21). */
+  readonly muzzle: THREE.Object3D | null = null;
   private head: THREE.Object3D | null;
 
   constructor(art: Art, kind: CharKind) {
@@ -45,6 +47,13 @@ export class CharView {
     const weapon = art.weapons[kind];
     if (hand && weapon) {
       const w = weapon.clone(true);
+      // Ponta do cano: a face +z da caixa da arma, no meio dela.
+      w.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(w).applyMatrix4(w.matrixWorld.clone().invert());
+      const muzzle = new THREE.Object3D();
+      muzzle.position.set((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, box.max.z);
+      w.add(muzzle);
+      this.muzzle = muzzle;
       // As armas do KayKit vêm com o cano em +z; no osso da mão (no tiro de duas mãos) isso
       // aponta para o lado. Um quarto de volta em y põe o cano para a frente (medido no
       // Ranged_2H_Shooting: produto com a frente de 0,02 para 1).
