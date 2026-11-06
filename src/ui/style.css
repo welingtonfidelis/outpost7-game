@@ -1,0 +1,1446 @@
+:root {
+  --panel: rgba(28, 23, 18, 0.84);
+  --panel-2: rgba(48, 40, 31, 0.92);
+  --line: rgba(255, 220, 160, 0.16);
+  --text: #f4ead8;
+  --muted: #bfae92;
+  --amber: #ffb020;
+  --red: #e5402a;
+  --green: #5cc46a;
+  --blue: #7fb2e0;
+  --gold: #e8c547;
+  --rust: #c8703f;
+  --stone: #9aa6b4;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #d9c4a3;
+  color: var(--text);
+  font: 500 15px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Segurar o dedo (caixa de seleção) não abre lupa nem menu no iPhone. */
+  -webkit-touch-callout: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: block;
+}
+
+#labels {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui button,
+#ui .panel,
+#ui .bench {
+  pointer-events: auto;
+}
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---------- HUD ---------- */
+.hud-top {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: calc(env(safe-area-inset-left) + 10px);
+  right: calc(env(safe-area-inset-right) + 10px);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 56px;
+}
+
+.stat small {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat .num {
+  font-size: 19px;
+}
+
+.morale-bar {
+  width: 70px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.morale-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.morale-bar.low > i {
+  background: var(--red);
+}
+
+.timer {
+  text-align: center;
+  min-width: 190px;
+}
+
+.timer .label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.timer .big {
+  font-size: 28px;
+}
+
+.timer .sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.timer.warning {
+  background: rgba(120, 22, 12, 0.88);
+  border-color: rgba(255, 120, 90, 0.6);
+  animation: siren 1s steps(2, jump-none) infinite;
+}
+
+.timer.warning .label,
+.timer.warning .sub {
+  color: #ffd2c4;
+}
+
+.timer.breach,
+.timer.assault {
+  background: rgba(70, 14, 10, 0.9);
+}
+
+@keyframes siren {
+  50% {
+    background: rgba(200, 40, 20, 0.92);
+  }
+}
+
+.side-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.side-tools button {
+  min-width: 44px;
+  padding: 8px 10px;
+}
+
+.side-tools button.on {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.hud-bottom {
+  position: absolute;
+  left: calc(env(safe-area-inset-left) + 10px);
+  right: calc(env(safe-area-inset-right) + 10px);
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.focus {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.focus .label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.seg {
+  display: flex;
+  gap: 4px;
+}
+
+.seg button {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.seg button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.seg button.on {
+  border-color: var(--amber);
+  background: rgba(255, 176, 32, 0.18);
+}
+
+.alarm {
+  min-height: 64px;
+  min-width: 190px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(#e5402a, #b32716);
+  border: 2px solid #ff9a80;
+  box-shadow: 0 4px 0 #6d160a;
+}
+
+.alarm:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #6d160a;
+}
+
+.alarm.on {
+  background: var(--panel-2);
+  border-color: var(--line);
+  box-shadow: none;
+  font-size: 15px;
+}
+
+.alarm.pulse {
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    box-shadow: 0 4px 0 #6d160a, 0 0 0 8px rgba(229, 64, 42, 0.35);
+  }
+}
+
+.right-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.toasts {
+  position: absolute;
+  right: calc(env(safe-area-inset-right) + 10px);
+  top: calc(env(safe-area-inset-top) + 92px);
+  width: min(300px, 46vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toast {
+  background: var(--panel);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  animation: toast-in 0.25s ease-out;
+}
+
+/* Aviso que leva a câmera até o lugar (mortes marcantes). */
+.toast.jump {
+  pointer-events: auto;
+  cursor: pointer;
+  text-align: left;
+  min-height: 0;
+  border: none;
+  border-left: 4px solid var(--amber);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.toast.bad {
+  border-left-color: var(--red);
+}
+
+.toast.good {
+  border-left-color: var(--green);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+.summary {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 14px 20px;
+  min-width: 260px;
+  animation: toast-in 0.3s ease-out;
+}
+
+.summary h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.summary p {
+  margin: 2px 0;
+  color: var(--muted);
+}
+
+.help {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 32px));
+  padding: 16px 18px;
+}
+
+.help h2 {
+  margin: 0 0 8px;
+}
+
+/* Tela de começo: o texto rola dentro do painel e o botão fica fixo embaixo. */
+.help.start {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  z-index: 50;
+}
+
+.help-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.help-actions .continue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-weight: 800;
+  border: 2px solid var(--green);
+  background: rgba(92, 196, 106, 0.18);
+  text-align: left;
+}
+
+.help-actions .continue small {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.save-btn .icon {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 520px), (max-height: 500px) {
+  .help.start {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .help.start li {
+    margin: 3px 0;
+  }
+}
+
+.help p,
+.help li {
+  color: var(--muted);
+  margin: 4px 0;
+}
+
+.help ul {
+  padding-left: 18px;
+  margin: 6px 0 12px;
+}
+
+.troops {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.troops .label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.selection {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 96px);
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 20px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: rgba(255, 210, 58, 0.6);
+}
+
+.sel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sel-head .ok {
+  color: var(--green);
+}
+
+.sel-head .bad {
+  color: #ff8a73;
+}
+
+.sel-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sel-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  padding: 6px 10px;
+}
+
+.sel-actions button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.build {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.build .label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.build .seg {
+  flex-wrap: wrap;
+}
+
+.build-hint {
+  white-space: normal;
+  max-width: min(560px, calc(100vw - 20px));
+}
+
+.move-hint .confirm {
+  border-color: var(--green);
+  background: rgba(92, 196, 106, 0.2);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.move-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 96px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-color: var(--amber);
+  white-space: nowrap;
+}
+
+.move-hint button {
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+/* Rótulos sobre os trabalhadores */
+.pill {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font: 700 12px/1.4 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #111;
+  background: var(--green);
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.pill.mid {
+  background: var(--amber);
+}
+
+.pill.low {
+  background: #ff6a4d;
+}
+
+.pill.zero {
+  background: #4a4038;
+  color: #ffb3a3;
+}
+
+.pill.out {
+  color: #fff;
+  background: rgba(20, 16, 12, 0.85);
+  border: 1px solid var(--line);
+}
+
+.pill.out.bad {
+  background: #8e1c0f;
+}
+
+/* Medidor de desempenho (?perf) */
+.perf {
+  position: fixed;
+  left: 8px;
+  bottom: calc(env(safe-area-inset-bottom) + 96px);
+  font: 11px/1.3 ui-monospace, monospace;
+  background: rgba(0, 0, 0, 0.6);
+  color: #cfe;
+  padding: 3px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* ---------- Etapa 0: medição ---------- */
+.bench {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  width: min(430px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.bench h1 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.bench-info,
+.bench-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.bench-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bench-row button {
+  padding: 6px 10px;
+  min-height: 38px;
+}
+
+.bench-summary {
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.bench-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.bench-table th,
+.bench-table td {
+  text-align: right;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bench-table th:first-child,
+.bench-table td:first-child {
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  .stats {
+    gap: 8px;
+  }
+  .stat .num {
+    font-size: 16px;
+  }
+  .timer {
+    min-width: 150px;
+  }
+  .timer .big {
+    font-size: 22px;
+  }
+  .alarm {
+    min-width: 140px;
+    font-size: 15px;
+  }
+  .seg button {
+    padding: 6px 7px;
+  }
+  .toasts {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 140px);
+  }
+}
+
+/* Celular em pé: ferramentas numa segunda linha e o alarme ocupando a largura toda. */
+@media (max-width: 520px) {
+  .hud-top {
+    flex-wrap: wrap;
+  }
+  .hud-top .stats {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .timer {
+    flex: 1;
+    min-width: 0;
+  }
+  .side-tools {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .side-tools button {
+    min-height: 36px;
+    min-width: 40px;
+    padding: 4px 8px;
+  }
+  .hud-bottom {
+    flex-wrap: wrap;
+  }
+  .hud-bottom .focus {
+    order: 1;
+  }
+  .hud-bottom .focus,
+  .hud-bottom .troops,
+  .hud-bottom .build {
+    flex: 1 1 100%;
+  }
+  .build .seg button {
+    flex: 1 1 22%;
+    padding: 6px 2px;
+    font-size: 13px;
+  }
+  .troops .seg button {
+    flex: 1;
+    padding: 6px 2px;
+    font-size: 13px;
+  }
+  .move-hint {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 330px);
+    white-space: normal;
+    width: calc(100vw - 20px);
+  }
+  .hud-bottom .seg button {
+    flex: 1;
+  }
+  .hud-bottom .right-tools {
+    order: 2;
+    flex: 1 1 100%;
+    flex-direction: row;
+  }
+  .hud-bottom .right-tools button {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+  .perf {
+    bottom: auto;
+    top: calc(env(safe-area-inset-top) + 210px);
+  }
+  .hud-bottom .alarm {
+    order: 3;
+    flex: 1 1 100%;
+    min-height: 56px;
+  }
+  .toasts {
+    width: calc(100vw - 20px);
+    top: calc(env(safe-area-inset-top) + 250px);
+    bottom: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer.warning,
+  .alarm.pulse {
+    animation: none;
+  }
+}
+
+/* ---------- Etapa 10: HUD de RTS ---------- */
+.hud-top {
+  align-items: flex-start;
+}
+
+.res {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.res-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 16px;
+}
+
+.res-item small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.res-item.bad .num {
+  color: #ff8a73;
+}
+
+.ico {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.ico.ore {
+  background: linear-gradient(135deg, #e09a62, #9c4f26);
+  transform: rotate(45deg) scale(0.85);
+}
+
+.ico.energy {
+  background: #ffd23a;
+  clip-path: polygon(55% 0, 10% 60%, 45% 60%, 35% 100%, 90% 38%, 55% 38%);
+  width: 12px;
+  height: 14px;
+  border-radius: 0;
+}
+
+.ico.worker {
+  background: #ff8a1f;
+  border-radius: 50%;
+}
+
+.ico.troop {
+  background: #8fd16a;
+  clip-path: polygon(50% 0, 100% 35%, 80% 100%, 20% 100%, 0 35%);
+  border-radius: 0;
+}
+
+.res-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.res-bars .morale-bar {
+  margin-top: 0;
+  width: 64px;
+}
+
+.morale-bar.core > i {
+  background: var(--blue);
+}
+
+.morale-bar.core.low > i {
+  background: var(--red);
+}
+
+.hud-bottom {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.minimap {
+  padding: 4px;
+  line-height: 0;
+}
+
+.minimap canvas {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  touch-action: none;
+  cursor: crosshair;
+  display: block;
+}
+
+.selection {
+  position: static;
+  transform: none;
+  width: auto;
+  max-width: 520px;
+  justify-self: center;
+  min-height: 70px;
+}
+
+.summary-box {
+  border-color: var(--line);
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.progress .bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.progress .bar > i {
+  display: block;
+  height: 100%;
+  background: var(--amber);
+}
+
+.command-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.command-col .alarm {
+  position: relative;
+  min-height: 52px;
+}
+
+/* Etapa 16: "Chamar em risco" ao lado do alarme geral. */
+.alarm-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.alarm-row .alarm {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recall {
+  flex: 0 0 38%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.1;
+  text-align: left;
+  /* Fundo sólido: sobre a areia, o âmbar transparente sumia. */
+  background: linear-gradient(#7a5410, #4a320a);
+  border: 2px solid var(--amber);
+  box-shadow: 0 3px 0 #2c1d05;
+  color: #ffe2a8;
+}
+
+.recall small {
+  font-weight: 600;
+  font-size: 11px;
+  color: #ffd27a;
+}
+
+.recall kbd {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+}
+
+.recall:disabled {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  color: var(--muted);
+}
+
+/* Contagem curta de quem não chega: só no celular em pé (no Mac a linha de baixo mostra). */
+.timer .tally {
+  display: none;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ff8a73;
+}
+
+.timer .risk {
+  color: #ff8a73;
+  font-weight: 700;
+}
+
+kbd {
+  font: 600 10px/1 ui-monospace, monospace;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+
+.alarm kbd {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  color: #ffd2c4;
+  border-color: rgba(255, 210, 196, 0.4);
+}
+
+.card {
+  display: grid;
+  grid-template-columns: repeat(3, 112px);
+  grid-auto-rows: 56px;
+  gap: 5px;
+  padding: 6px;
+}
+
+.cmd {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  min-height: 0;
+  text-align: left;
+  line-height: 1.1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cmd .cmd-label {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cmd-txt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Ícones (Etapa 13): retrato da arte ou desenho de traço. */
+.icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
+.icon.glyph {
+  color: #ffd9a0;
+}
+
+.icon.portrait {
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgba(127, 198, 255, 0.35);
+  object-fit: cover;
+}
+
+.cmd:disabled .icon {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+}
+
+.cmd.go .icon.glyph {
+  color: var(--green);
+}
+
+.cmd.stop .icon.glyph {
+  color: #ff8a73;
+}
+
+/* Retrato no painel da seleção. */
+.sel-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.sel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sel-portrait {
+  width: 58px;
+  height: 58px;
+  flex: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1c2a33;
+  box-shadow: 0 0 0 1px rgba(127, 198, 255, 0.45), inset 0 0 12px rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+}
+
+.sel-portrait img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sel-portrait .icon.glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.morale-bar.hp-ok > i {
+  background: var(--green);
+}
+
+.morale-bar.hp-mid > i {
+  background: var(--amber);
+}
+
+.morale-bar.hp-low > i {
+  background: var(--red);
+}
+
+.sel-late {
+  color: #ff8a73;
+  font-weight: 700;
+}
+
+.sel-tip {
+  color: #b8f5bf;
+}
+
+/* Várias tropas: grade de retratos com a vida embaixo. */
+.unit-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.unit-tile {
+  position: relative;
+  width: 34px;
+  height: 38px;
+  padding: 2px 2px 6px;
+  border-radius: 6px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.unit-tile .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.unit-tile .tile-hp {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  height: 3px;
+  border-radius: 2px;
+  max-width: calc(100% - 6px);
+  background: var(--green);
+}
+
+.unit-tile .tile-hp.hp-mid {
+  background: var(--amber);
+}
+
+.unit-tile .tile-hp.hp-low {
+  background: var(--red);
+}
+
+span.unit-tile {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+}
+
+.unit-tile.slot-empty {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+.unit-more {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+/* Caixa de seleção (segurar e arrastar). */
+.boxsel {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  border: 1.5px solid #7dff8a;
+  background: rgba(125, 255, 138, 0.12);
+  border-radius: 2px;
+}
+
+.cmd small {
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cmd kbd {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+}
+
+.cmd.on {
+  border-color: var(--amber);
+  background: rgba(255, 176, 32, 0.2);
+}
+
+.cmd.go {
+  border-color: var(--green);
+  background: rgba(92, 196, 106, 0.2);
+}
+
+.cmd.stop {
+  border-color: rgba(229, 64, 42, 0.6);
+}
+
+.cmd.empty {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.build-hint {
+  top: calc(env(safe-area-inset-top) + 96px);
+}
+
+/* Celular deitado: tudo mais baixo. */
+@media (max-height: 500px) {
+  .minimap canvas {
+    width: 104px;
+    height: 104px;
+  }
+  .card {
+    grid-template-columns: repeat(3, 78px);
+    grid-auto-rows: 42px;
+  }
+  .cmd small {
+    display: none;
+  }
+  .cmd {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 4px;
+  }
+  .cmd-txt {
+    align-items: center;
+    flex: none;
+    max-width: 100%;
+  }
+  .cmd .cmd-label {
+    font-size: 11px;
+  }
+  .cmd .icon {
+    width: 20px;
+    height: 20px;
+  }
+  .sel-portrait {
+    width: 40px;
+    height: 40px;
+  }
+  .selection {
+    min-height: 0;
+  }
+  .selection .sel-sub {
+    display: none;
+  }
+  .command-col .alarm {
+    min-height: 40px;
+    font-size: 14px;
+  }
+  .recall small {
+    display: none;
+  }
+  .recall {
+    font-size: 12px;
+  }
+  .timer .big {
+    font-size: 20px;
+  }
+}
+
+/* Celular em pé: minimapa no canto de cima; embaixo a seleção e a grade em largura total. */
+@media (max-width: 520px) {
+  .hud-top {
+    flex-wrap: wrap;
+  }
+  .hud-top .res {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+  .hud-top .side-tools {
+    order: 1;
+    width: auto;
+  }
+  .hud-top .timer {
+    order: 2;
+    flex: 1;
+  }
+  .side-tools button {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 2px 6px;
+  }
+  .minimap {
+    position: fixed;
+    left: calc(env(safe-area-inset-left) + 10px);
+    top: calc(env(safe-area-inset-top) + 150px);
+  }
+  .minimap canvas {
+    width: 92px;
+    height: 92px;
+  }
+  .hud-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selection {
+    max-width: none;
+    justify-self: stretch;
+    min-height: 0;
+  }
+  .card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 50px;
+  }
+  .toasts {
+    top: calc(env(safe-area-inset-top) + 250px);
+  }
+  .build-hint {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 330px);
+  }
+}
+
+/* Celular em pé, versão compacta: o HUD fica abaixo de ~35% da tela. */
+@media (max-width: 520px) {
+  .hud-top {
+    gap: 6px;
+    top: calc(env(safe-area-inset-top) + 6px);
+  }
+  .timer {
+    padding: 4px 8px;
+    min-width: 0;
+  }
+  .timer .label {
+    font-size: 10px;
+  }
+  .timer .big {
+    font-size: 20px;
+  }
+  .timer .sub {
+    display: none;
+  }
+  .timer .tally {
+    display: block;
+  }
+  .hud-top .res {
+    padding: 4px 8px;
+  }
+  .res-item {
+    font-size: 14px;
+  }
+  .res-bars .morale-bar {
+    width: 48px;
+  }
+  .minimap {
+    top: calc(env(safe-area-inset-top) + 104px);
+  }
+  .hud-bottom .summary-box {
+    display: none;
+  }
+  .hud-bottom {
+    gap: 6px;
+    bottom: calc(env(safe-area-inset-bottom) + 6px);
+  }
+  .card {
+    grid-auto-rows: 44px;
+    gap: 4px;
+    padding: 4px;
+  }
+  .cmd .cmd-label {
+    font-size: 12.5px;
+  }
+  .cmd small {
+    font-size: 10px;
+  }
+  .cmd .icon {
+    width: 24px;
+    height: 24px;
+  }
+  .sel-portrait {
+    width: 44px;
+    height: 44px;
+  }
+  .unit-tile {
+    width: 30px;
+    height: 34px;
+  }
+  .unit-tile .icon {
+    width: 24px;
+    height: 24px;
+  }
+  .command-col {
+    gap: 6px;
+  }
+  .command-col .alarm {
+    min-height: 46px;
+  }
+  .selection {
+    padding: 6px 10px;
+  }
+  .toasts {
+    top: calc(env(safe-area-inset-top) + 210px);
+  }
+  .build-hint {
+    bottom: calc(env(safe-area-inset-bottom) + 220px);
+  }
+}
