@@ -3,7 +3,7 @@
 ## KayKit (Kay Lousberg) — CC0 1.0
 
 Modelos, texturas e animações em `public/assets/kaykit/`, copiados da Coleção Completa do
-KayKit v6.1 (local em `Projects/others/kaykit-complete-v6-1-assets`) por `npm run art`
+KayKit v6.1 (local em `Projects/others/bibliotecas/kaykit-complete-v6-1-assets`) por `npm run art`
 (lista em `tools/art-manifest.ts`). Licença CC0: uso livre, sem obrigação de crédito. Crédito
 mesmo assim: **KayKit — Kay Lousberg (kaylousberg.com)**.
 

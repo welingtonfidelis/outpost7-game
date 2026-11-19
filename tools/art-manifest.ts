@@ -2,7 +2,7 @@
  * O que vem da coleção KayKit local (CC0) para public/assets/kaykit. Só estes arquivos são
  * copiados (`npm run art`); a coleção fica fora do projeto.
  */
-export const KAYKIT_ROOT = '../kaykit-complete-v6-1-assets';
+export const KAYKIT_ROOT = '../bibliotecas/kaykit-complete-v6-1-assets';
 
 const SB = 'KayKit Space Base Bits 1.0/Assets/gltf';
 const PB = 'KayKit Prototype Bits 1.1/Assets/gltf';
